@@ -15,6 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+// Floating point addition
+// This module is pipelined. It can calculate one addition per clock
+// This module has a latency of 4 clock cycles
 module FloatAdd
 # (
     parameter MANTISSA_SIZE = 23,

@@ -86,18 +86,31 @@ module top
         .m_axis_tdata(s_cmd_axis_tdata)
     );
 
-    FloatSub
+    // FloatSub
+    // #(
+    //     .MANTISSA_SIZE(10),
+    //     .EXPONENT_SIZE(8),
+    //     .ENABLE_OPTIMIZATION(1)
+    // )
+    // floatSub
+    // (
+    //     .clk(clk),
+    //     .aIn(s_cmd_axis_tdata[0 +: 19]),
+    //     .bIn(valReg),
+    //     .sum(val),
+    // );
+
+    FloatMul
     #(
         .MANTISSA_SIZE(10),
-        .EXPONENT_SIZE(8),
-        .ENABLE_OPTIMIZATION(1)
+        .EXPONENT_SIZE(8)
     )
     floatSub
     (
         .clk(clk),
-        .aIn(s_cmd_axis_tdata[0 +: 19]),
-        .bIn(valReg),
-        .sum(val),
+        .facAIn(s_cmd_axis_tdata[0 +: 19]),
+        .facBIn(valReg),
+        .prod(val),
     );
 
     always @(posedge clk)
