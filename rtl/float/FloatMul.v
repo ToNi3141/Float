@@ -142,7 +142,7 @@ module FloatMul
     always @(posedge clk)
     begin : Pack
         reg  [EXPONENT_SIZE - 1 : 0] exponentSum;
-        reg  [EXPONENT_SIZE : 0] exponentSumTmp;
+        reg  [EXPONENT_SIZE : 0]     exponentSumTmp;
         reg  [MANTISSA_SIZE - 1 : 0] mantissaNormalized;
         reg                          normalizationRequired;
         reg                          mantissaOverlow;

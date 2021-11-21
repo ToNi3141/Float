@@ -113,16 +113,29 @@ module top
     //     .prod(val),
     // );
 
-    IntToFloat
+    // IntToFloat
+    // #(
+    //     .MANTISSA_SIZE(10),
+    //     .EXPONENT_SIZE(8),
+    //     .INT_SIZE(16)
+    // )
+    // intToFloat
+    // (
+    //     .clk(clk),
+    //     .in(s_cmd_axis_tdata),
+    //     .out(val),
+    // );
+
+    FloatToInt
     #(
         .MANTISSA_SIZE(10),
         .EXPONENT_SIZE(8),
-        .INT_SIZE(16)
+        .INT_SIZE(19)
     )
-    intToFloat
+    floatToInt
     (
         .clk(clk),
-        .in(s_cmd_axis_tdata),
+        .in(s_cmd_axis_tdata[0 +: 19]),
         .out(val),
     );
 
