@@ -1,6 +1,6 @@
 PROJ = float
 
-all: sub mul
+all: sub mul itf
 
 clean:
 	rm -R obj_dir
@@ -14,6 +14,11 @@ mul:
 	verilator -CFLAGS -std=c++11 -Wno-lint -Wno-style -Wno-fatal --cc -exe ../rtl/float/FloatMul.v --top-module FloatMul sim_FloatMul.cpp -I../rtl/float/
 	make -C obj_dir -f VFloatMul.mk
 	./obj_dir/VFloatMul
+
+itf:
+	verilator -CFLAGS -std=c++11 -Wno-lint -Wno-style -Wno-fatal --cc -exe ../rtl/float/IntToFloat.v --top-module IntToFloat sim_IntToFloat.cpp -I../rtl/float/
+	make -C obj_dir -f VIntToFloat.mk
+	./obj_dir/VIntToFloat
 
 sim: my_design
 	vvp my_design

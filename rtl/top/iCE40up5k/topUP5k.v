@@ -100,17 +100,30 @@ module top
     //     .sum(val),
     // );
 
-    FloatMul
+    // FloatMul
+    // #(
+    //     .MANTISSA_SIZE(10),
+    //     .EXPONENT_SIZE(8)
+    // )
+    // floatMul
+    // (
+    //     .clk(clk),
+    //     .facAIn(s_cmd_axis_tdata[0 +: 19]),
+    //     .facBIn(valReg),
+    //     .prod(val),
+    // );
+
+    IntToFloat
     #(
         .MANTISSA_SIZE(10),
-        .EXPONENT_SIZE(8)
+        .EXPONENT_SIZE(8),
+        .INT_SIZE(16)
     )
-    floatSub
+    intToFloat
     (
         .clk(clk),
-        .facAIn(s_cmd_axis_tdata[0 +: 19]),
-        .facBIn(valReg),
-        .prod(val),
+        .in(s_cmd_axis_tdata),
+        .out(val),
     );
 
     always @(posedge clk)

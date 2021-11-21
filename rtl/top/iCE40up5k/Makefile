@@ -16,6 +16,7 @@ SRC += ../../float/FloatSub.v
 SRC += ../../float/FloatAdd.v
 SRC += ../../float/FindExponent.v
 SRC += ../../float/FloatMul.v
+SRC += ../../float/IntToFloat.v
 
 SYNTH_OUT = ./synth
 YOSYS = yosys
