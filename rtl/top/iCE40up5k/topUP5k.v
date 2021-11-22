@@ -126,13 +126,37 @@ module top
     //     .out(val),
     // );
 
-    FloatToInt
+    // FloatToInt
+    // #(
+    //     .MANTISSA_SIZE(10),
+    //     .EXPONENT_SIZE(8),
+    //     .INT_SIZE(19)
+    // )
+    // floatToInt
+    // (
+    //     .clk(clk),
+    //     .in(s_cmd_axis_tdata[0 +: 19]),
+    //     .out(val),
+    // );
+
+    // FloatFastRecip
+    // #(
+    //     .MANTISSA_SIZE(10)
+    //     //.EXPONENT_SIZE(8)
+    // )
+    // floatFastRecip
+    // (
+    //     .clk(clk),
+    //     .in(s_cmd_axis_tdata[0 +: 19]),
+    //     .out(val),
+    // );
+
+    FloatFastRecip2
     #(
-        .MANTISSA_SIZE(10),
-        .EXPONENT_SIZE(8),
-        .INT_SIZE(19)
+        .MANTISSA_SIZE(10)
+        //.EXPONENT_SIZE(8)
     )
-    floatToInt
+    floatFastRecip2
     (
         .clk(clk),
         .in(s_cmd_axis_tdata[0 +: 19]),
