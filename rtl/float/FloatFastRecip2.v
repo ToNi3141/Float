@@ -18,7 +18,7 @@
 // Floating point reciprocal
 // This module is pipelined. It can calculate one reciprocal per clock
 // This module uses an magic algorithm to calculate that. It is similar to the FloatFastRecip modul, but
-// this module is much more accurat with the disadvantage that it uses more logic and has much more delay.
+// this module is much more accurate with the disadvantage that it uses more logic and has much more delay.
 // Refer to https://en.wikipedia.org/wiki/Fast_inverse_square_root
 // This module has a latency of 12 clock cycles
 module FloatFastRecip2
