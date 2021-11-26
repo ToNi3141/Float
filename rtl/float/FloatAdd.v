@@ -111,7 +111,7 @@ module FloatAdd
         end
         else 
         begin
-            smallNumberMantissaDenormalized = one_smallNumberMantissaDenormalized + one_smallNumberMantissa[one_exponentDiff - 1];
+            smallNumberMantissaDenormalized = one_smallNumberMantissaDenormalized + {{(MANTISSA_CALC_SIZE - 1){1'b0}}, one_smallNumberMantissa[one_exponentDiff - 1]};
         end
 
         // Convert unsigned number into a signed
@@ -175,47 +175,47 @@ module FloatAdd
         // No one was found in the mantissa 
         // Or the exponent of both numbers was zero and the mantissa is till too small to increment the exponent
         if ((three_exponentCorrection == EXPONENT_INVALID_VALUE) 
-            || ((three_bigNumberExponent == 0) && (three_smallNumberExponent == 0) && (three_exponentCorrection < MANTISSA_SIZE)))
+            || ((three_bigNumberExponent == 0) && (three_smallNumberExponent == 0) && (three_exponentCorrection < MANTISSA_SIZE[0 +: EXPONENT_SIZE])))
         begin
             sumExponent = 0;
         end
         // Both exponents are zero but the mantissa is big enough to increment the exponent
-        else if ((three_bigNumberExponent == 0) && (three_smallNumberExponent == 0) && (three_exponentCorrection == MANTISSA_SIZE))
+        else if ((three_bigNumberExponent == 0) && (three_smallNumberExponent == 0) && (three_exponentCorrection == MANTISSA_SIZE[0 +: EXPONENT_SIZE]))
         begin
             sumExponent = 1;
         end
         // The mantissa got smaller, so the new expoent has to be decremented
-        else if (three_exponentCorrection < MANTISSA_SIZE)
+        else if (three_exponentCorrection < MANTISSA_SIZE[0 +: EXPONENT_SIZE])
         begin
-            sumExponent = three_bigNumberExponent - (MANTISSA_SIZE - three_exponentCorrection);
+            sumExponent = three_bigNumberExponent - (MANTISSA_SIZE[0 +: EXPONENT_SIZE] - three_exponentCorrection);
         end
         // In all other cases, the exponent can be incremented
         else 
         begin
-            sumExponent = three_bigNumberExponent + three_sumMantissa[MANTISSA_CALC_ONE_POS];
+            sumExponent = three_bigNumberExponent + {{(EXPONENT_SIZE - 1){1'b0}}, three_sumMantissa[MANTISSA_CALC_ONE_POS]};
         end
 
         // Check if we have to shift the mantissa
         // If the small number was already a denormalized number and the mantissa is still normalized, then we don't need to do anything with the mantissa.
-        if ((three_smallNumberExponent == 0) && (three_exponentCorrection < MANTISSA_SIZE))
+        if ((three_smallNumberExponent == 0) && (three_exponentCorrection < MANTISSA_SIZE[0 +: EXPONENT_SIZE]))
         begin
-            normalizedMantissa = three_sumMantissa;
+            normalizedMantissa = three_sumMantissa[0 +: MANTISSA_SIZE];
         end
         // If no one was found in the mantissa, do nothing
         else if (three_exponentCorrection == EXPONENT_INVALID_VALUE)
         begin
             // we could assign a zero here or assign the calculated mantissa, which is obviously also zero. Otherwise we would have found a one and wouldn't be in this case ... 
-            normalizedMantissa = three_sumMantissa;
+            normalizedMantissa = three_sumMantissa[0 +: MANTISSA_SIZE];
         end
         // We found a denormalized mantissa (a mantissa, which is too small). We have to shift it to the left now till it is normalized
-        else if (three_exponentCorrection < (MANTISSA_SIZE + 1))
+        else if (three_exponentCorrection < (MANTISSA_SIZE[0 +: EXPONENT_SIZE] + 1))
         begin
-            normalizedMantissa = (three_sumMantissa << (MANTISSA_SIZE[0 +: MANTISSA_WIDTH_LOG2] - three_exponentCorrection[0 +: MANTISSA_WIDTH_LOG2]));
+            normalizedMantissa = {(three_sumMantissa << (MANTISSA_SIZE[0 +: MANTISSA_WIDTH_LOG2] - three_exponentCorrection[0 +: MANTISSA_WIDTH_LOG2]))}[0 +: MANTISSA_SIZE];
         end
         // We found a denormalized mantissa, which is too big, for that reason, we have to shift it to the right
         else
         begin
-            normalizedMantissa = three_sumMantissa >> 1; // In an addition, we can only shift by one to the right. More is not possible because the summation result can only overflow by one bit
+            normalizedMantissa = {three_sumMantissa >> 1}[0 +: MANTISSA_SIZE]; // In an addition, we can only shift by one to the right. More is not possible because the summation result can only overflow by one bit
         end
 
         sum <= {three_sumMantissaSign, sumExponent, normalizedMantissa};

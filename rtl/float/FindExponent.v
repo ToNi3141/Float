@@ -24,16 +24,20 @@ module FindExponent
     input  wire [VALUE_SIZE - 1 : 0]    value,
     output wire [EXPONENT_SIZE - 1 : 0] exponent
 );
-    wire [EXPONENT_SIZE - 1 : 0] tmp [0 : VALUE_SIZE - 1];
+    localparam ITERATOR_SIZE = VALUE_SIZE + 1;
+    // Should not be a problem in real hardware?
+    /* verilator lint_off UNOPTFLAT */
+    wire [EXPONENT_SIZE - 1 : 0] tmp [0 : ITERATOR_SIZE - 1];
+    /* verilator lint_on UNOPTFLAT */
     assign tmp[0] = {EXPONENT_SIZE{1'b1}}; // Default when no one was found
     generate 
         genvar i;
-        for(i = 0; i < VALUE_SIZE - 1; i = i + 1)
+        for(i = 0; i < ITERATOR_SIZE - 1; i = i + 1)
         begin
             // if a one was found, use the current i as value, otherwise return the value from the previous step.
             // The biggest value will be found at the end of the array 
             assign tmp[i + 1] = value[i] ? i : tmp[i]; 
         end
     endgenerate
-    assign exponent = tmp[VALUE_SIZE - 1];
+    assign exponent = tmp[ITERATOR_SIZE - 1];
 endmodule

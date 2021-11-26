@@ -41,7 +41,7 @@ module IntToFloat
     localparam USNIGNED_INT_SIZE_LOG2 = $clog2(UNSIGNED_INT_SIZE);
 
     wire [EXPONENT_SIZE - 1 : 0] exponent;
-    FindExponent #(.EXPONENT_SIZE(EXPONENT_SIZE), .VALUE_SIZE(INT_SIZE)) findExponent (one_number, exponent);
+    FindExponent #(.EXPONENT_SIZE(EXPONENT_SIZE), .VALUE_SIZE(UNSIGNED_INT_SIZE)) findExponent (one_number, exponent);
 
     reg  [UNSIGNED_INT_SIZE - 1 : 0]    one_number;
     reg                                 one_sign;
@@ -81,7 +81,7 @@ module IntToFloat
         reg [UNSIGNED_INT_SIZE - 1 : 0] tmp;
 
         three_mantissaOverflow = two_number[two_exponent[0 +: USNIGNED_INT_SIZE_LOG2] - MANTISSA_SIZE[0 +: USNIGNED_INT_SIZE_LOG2] - 1];
-        three_shiftLeft = two_exponent < MANTISSA_SIZE;
+        three_shiftLeft = two_exponent < MANTISSA_SIZE[0 +: EXPONENT_SIZE];
         if (two_number == 0)
         begin
             three_number <= 0;
@@ -95,9 +95,9 @@ module IntToFloat
         end
         else
         begin
-            three_shiftSize <= ((two_exponent[0 +: USNIGNED_INT_SIZE_LOG2] + three_mantissaOverflow) - MANTISSA_SIZE[0 +: USNIGNED_INT_SIZE_LOG2]);
+            three_shiftSize <= ((two_exponent[0 +: USNIGNED_INT_SIZE_LOG2] + {{(USNIGNED_INT_SIZE_LOG2 - 1){1'b0}}, three_mantissaOverflow}) - MANTISSA_SIZE[0 +: USNIGNED_INT_SIZE_LOG2]);
             three_number <= two_number;
-            three_exponent <= two_exponent + EXPONENT_BIAS + three_mantissaOverflow;
+            three_exponent <= two_exponent + EXPONENT_BIAS + {{(EXPONENT_SIZE - 1){1'b0}}, three_mantissaOverflow};
         end
 
         three_sign <= two_sign;
@@ -115,6 +115,6 @@ module IntToFloat
         begin
             tmp = three_number >> three_shiftSize;
         end
-        out <= {three_sign, three_exponent, tmp[0 +: MANTISSA_SIZE] + three_mantissaOverflow};
+        out <= {three_sign, three_exponent, tmp[0 +: MANTISSA_SIZE] + {{(MANTISSA_SIZE - 1){1'b0}}, three_mantissaOverflow}};
     end
 endmodule

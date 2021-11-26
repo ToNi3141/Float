@@ -58,6 +58,7 @@ module FloatToInt
     always @(posedge clk)
     begin : Unpack
         reg signed [EXPONENT_SIGNED_SIZE - 1 : 0] exponent;
+        reg signed [EXPONENT_SIGNED_SIZE - 1 : 0] shiftSize;
 
         one_sign <= in[SIGN_POS +: 1];
         exponent = in[EXPONENT_POS +: EXPONENT_SIZE] - EXPONENT_BIAS;
@@ -68,12 +69,13 @@ module FloatToInt
         one_shiftLeft = exponent > MANTISSA_SIZE;
         if (one_shiftLeft)
         begin
-            one_shiftSize <= exponent - MANTISSA_SIZE;
+            shiftSize = exponent - MANTISSA_SIZE[0 +: EXPONENT_SIGNED_SIZE];
         end
         else
         begin
-            one_shiftSize <= MANTISSA_SIZE - exponent;
+            shiftSize = MANTISSA_SIZE[0 +: EXPONENT_SIGNED_SIZE] - exponent;
         end
+        one_shiftSize <= shiftSize[0 +: USNIGNED_INT_SIZE_LOG2];
 
         one_overflow <= exponent >= (INT_SIZE - 1); // Substracting sign bit
         one_underflow <= exponent < 0;
@@ -125,7 +127,7 @@ module FloatToInt
         else 
         begin
             three_underflow <= two_underflow;
-            three_number <= two_number + two_round;
+            three_number <= two_number + {{(INT_SIZE - 1){1'b0}}, two_round};
         end
         three_overflow <= two_overflow;
         three_sign <= two_sign;

@@ -66,7 +66,7 @@ module FloatFastRecip2
     floatSub
     (
         .clk(clk),
-        .aIn(TWO_POINT_ZERO),
+        .aIn(TWO_POINT_ZERO[0 +: FLOAT_SIZE]),
         .bIn(w),
         .sum(tmp)
     );

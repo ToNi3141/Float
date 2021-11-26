@@ -39,7 +39,8 @@ module FloatMul
 
     localparam MANTISSA_CALC_SIZE = MANTISSA_SIZE + 1; // Add hidden bit
     localparam MANTISSA_PROD_SIZE = MANTISSA_CALC_SIZE * 2;
-    localparam EXPONENT_SUM_SIZE = EXPONENT_SIZE + 1 + 1; // Add one bit for sign and one for overflow
+    localparam EXPONENT_SUM_ADDITIONAL_BITS = 1 + 1; // Add one bit for sign and one for overflow
+    localparam EXPONENT_SUM_SIZE = EXPONENT_SIZE + EXPONENT_SUM_ADDITIONAL_BITS; 
 
     reg                               one_facASign;
     reg                               one_facBSign;
@@ -60,8 +61,8 @@ module FloatMul
         facA = facBIn;
         facB = facAIn;
 
-        one_facAExponent = facA[EXPONENT_POS +: EXPONENT_SIZE];
-        one_facBExponent = facB[EXPONENT_POS +: EXPONENT_SIZE];
+        one_facAExponent = {{EXPONENT_SUM_ADDITIONAL_BITS{1'b0}}, facA[EXPONENT_POS +: EXPONENT_SIZE]};
+        one_facBExponent = {{EXPONENT_SUM_ADDITIONAL_BITS{1'b0}}, facB[EXPONENT_POS +: EXPONENT_SIZE]};
 
         expFacBGreaterThanZero = one_facBExponent > 0;
         expFacAGreaterThanZero = one_facAExponent > 0;
@@ -115,8 +116,8 @@ module FloatMul
         // Safe the sign of the product
         two_mantissaProdSign <= one_facASign ^ one_facBSign;
 
-        two_facAExponent <= one_facAExponent;
-        two_facBExponent <= one_facBExponent;
+        two_facAExponent <= one_facAExponent[0 +: EXPONENT_SIZE];
+        two_facBExponent <= one_facBExponent[0 +: EXPONENT_SIZE];
     end
     
     // Bubble cylce to add one clock latency. 
@@ -169,7 +170,7 @@ module FloatMul
             if (normalizationRequired)
             begin
                 // Standard case where we have a normalized mantissa. In this case we can just use the calculated sum.
-                exponentSumTmp = three_exponentSum + mantissaOverlow;
+                exponentSumTmp = three_exponentSum + {{EXPONENT_SIZE{1'b0}}, mantissaOverlow};
             end
             else
             begin
@@ -186,11 +187,12 @@ module FloatMul
             end
             else if (normalizationRequired)
             begin
-                mantissaNormalized = three_prodMantissa >> (MANTISSA_SIZE + mantissaOverlow);
+                mantissaNormalized = {(three_prodMantissa >> ({{(MANTISSA_PROD_SIZE - MANTISSA_SIZE){1'b0}}, MANTISSA_SIZE[0 +: MANTISSA_SIZE]} 
+                                                                 + {{(MANTISSA_PROD_SIZE - 1){1'b0}}, mantissaOverlow}))}[0 +: MANTISSA_SIZE];
             end
             else 
             begin
-                mantissaNormalized = three_prodMantissa;
+                mantissaNormalized = three_prodMantissa[0 +: MANTISSA_SIZE];
             end
         end
 
