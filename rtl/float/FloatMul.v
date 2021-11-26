@@ -144,7 +144,7 @@ module FloatMul
     begin : Pack
         reg  [EXPONENT_SIZE - 1 : 0] exponentSum;
         reg  [EXPONENT_SIZE : 0]     exponentSumTmp;
-        reg  [MANTISSA_SIZE - 1 : 0] mantissaNormalized;
+        reg  [MANTISSA_PROD_SIZE - 1 : 0] mantissaNormalized;
         reg                          normalizationRequired;
         reg                          mantissaOverlow;
 
@@ -187,15 +187,15 @@ module FloatMul
             end
             else if (normalizationRequired)
             begin
-                mantissaNormalized = {(three_prodMantissa >> ({{(MANTISSA_PROD_SIZE - MANTISSA_SIZE){1'b0}}, MANTISSA_SIZE[0 +: MANTISSA_SIZE]} 
-                                                                 + {{(MANTISSA_PROD_SIZE - 1){1'b0}}, mantissaOverlow}))}[0 +: MANTISSA_SIZE];
+                mantissaNormalized = three_prodMantissa >> ({{(MANTISSA_PROD_SIZE - MANTISSA_SIZE){1'b0}}, MANTISSA_SIZE[0 +: MANTISSA_SIZE]} 
+                                                                 + {{(MANTISSA_PROD_SIZE - 1){1'b0}}, mantissaOverlow});
             end
             else 
             begin
-                mantissaNormalized = three_prodMantissa[0 +: MANTISSA_SIZE];
+                mantissaNormalized = three_prodMantissa;
             end
         end
 
-        prod <= {three_prodMantissaSign, exponentSum, mantissaNormalized};
+        prod <= {three_prodMantissaSign, exponentSum, mantissaNormalized[0 +: MANTISSA_SIZE]};
     end
 endmodule
