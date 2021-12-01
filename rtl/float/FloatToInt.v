@@ -61,7 +61,7 @@ module FloatToInt
         reg signed [EXPONENT_SIGNED_SIZE - 1 : 0] shiftSize;
 
         one_sign <= in[SIGN_POS +: 1];
-        exponent = in[EXPONENT_POS +: EXPONENT_SIZE] - EXPONENT_BIAS;
+        exponent = in[EXPONENT_POS +: EXPONENT_SIZE] - EXPONENT_BIAS[0 +: EXPONENT_SIZE];
 
         // A float in the range of an integer will always have set the hidden bit to one since we can't display fractions with an integer
         one_number <= {{(INT_SIZE - MANTISSA_SIZE - 1){1'b0}}, 1'b1, in[MANTISSA_POS +: MANTISSA_SIZE]};
