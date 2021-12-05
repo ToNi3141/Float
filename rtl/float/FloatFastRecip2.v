@@ -32,10 +32,7 @@ module FloatFastRecip2
     input  wire [FLOAT_SIZE - 1 : 0] in,
     output wire [FLOAT_SIZE - 1 : 0] out
 );
-    // Original value, produces a more accurate approximation, but 1 / 1 = 0.99...
-    // localparam MAGIC_NUMBER = 32'h7EF127EA >> (32 - FLOAT_SIZE);
-    // This value is not that accurate, but 1 / 1 = 1, which is more important for 3D graphics (when orthogonal sceenes like user interfaces)
-    localparam MAGIC_NUMBER = 32'h7EFFFFFF >> (32 - FLOAT_SIZE); 
+    localparam MAGIC_NUMBER = 32'h7EF127EA >> (32 - FLOAT_SIZE);
 
     localparam TWO_POINT_ZERO = 32'h40000000 >> (32 - FLOAT_SIZE); // float representation for 2.0
     localparam SIGN_POS = FLOAT_SIZE - 1;
