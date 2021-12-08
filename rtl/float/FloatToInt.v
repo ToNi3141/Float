@@ -66,7 +66,7 @@ module FloatToInt
         // A float in the range of an integer will always have set the hidden bit to one since we can't display fractions with an integer
         one_number <= {{(INT_SIZE - MANTISSA_SIZE - 1){1'b0}}, 1'b1, in[MANTISSA_POS +: MANTISSA_SIZE]};
 
-        one_shiftLeft = exponent > MANTISSA_SIZE;
+        one_shiftLeft = exponent > $signed(MANTISSA_SIZE[0 +: EXPONENT_SIGNED_SIZE]);
         if (one_shiftLeft)
         begin
             shiftSize = exponent - MANTISSA_SIZE[0 +: EXPONENT_SIGNED_SIZE];
