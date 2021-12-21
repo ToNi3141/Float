@@ -81,11 +81,22 @@ module FloatAdd
         expBigGreaterThanZero = one_bigNumberExponent > 0;
 
         one_bigNumberMantissa = {2'b0, expBigGreaterThanZero, bigNumber[MANTISSA_POS +: MANTISSA_SIZE]};
-        one_smallNumberMantissa = {2'b0, expSmallGreaterThanZero, smallNumber[MANTISSA_POS +: MANTISSA_SIZE]};
 
-        // Use for the small number the same exponent, which is used by the big number
+        // Denormalize the small mantissa to enable the summerization with the big exponent
         one_exponentDiff = one_bigNumberExponent - one_smallNumberExponent;
-        one_smallNumberMantissaDenormalized = one_smallNumberMantissa >>> one_exponentDiff[0 +: MANTISSA_WIDTH_LOG2];
+        // The timing here is really stressed. A fifth pipeline step could reduce stress here ...
+        if (one_exponentDiff >= MANTISSA_SIZE)
+        begin
+            // If the small number is too small, set everything to zero
+            one_smallNumberMantissa = 0;
+            one_smallNumberMantissaDenormalized = 0;
+        end
+        else 
+        begin
+            // If the small number is big enough for summerization, denormalize it!
+            one_smallNumberMantissa = {2'b0, expSmallGreaterThanZero, smallNumber[MANTISSA_POS +: MANTISSA_SIZE]};
+            one_smallNumberMantissaDenormalized = one_smallNumberMantissa >>> one_exponentDiff[0 +: MANTISSA_WIDTH_LOG2];
+        end
 
         one_exponentDiffGreaterZero = one_exponentDiff > 0;
         one_bigNumberSign <= bigNumber[SIGN_POS];

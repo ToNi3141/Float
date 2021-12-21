@@ -45,6 +45,28 @@ void testSub(VFloatSub* top, uint32_t a, uint32_t b, uint32_t result)
     REQUIRE(top->sum == result);
 }
 
+void testSubf(VFloatSub* top, float a, float b)
+{
+    float r = a - b;
+    testSub(top, *(uint32_t*)&a, *(uint32_t*)&b, *(uint32_t*)&r);
+}
+
+TEST_CASE( "Regression test. Check if small substractions have no effect on the result", "[Substraction]" ) 
+{
+    VFloatSub* top = new VFloatSub;
+
+    for (int i = 0; i < 100; i++)
+    {
+        testSubf(top, 0.999f, -0.0000000000001 * i);
+    }
+
+    // Final model cleanup
+    top->final();
+
+    // Destroy model
+    delete top;
+}
+
 TEST_CASE( "Check cascating add ", "[Substraction]" ) 
 {
     VFloatSub* top = new VFloatSub;
