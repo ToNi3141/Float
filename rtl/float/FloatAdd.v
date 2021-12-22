@@ -85,7 +85,7 @@ module FloatAdd
         // Denormalize the small mantissa to enable the summerization with the big exponent
         one_exponentDiff = one_bigNumberExponent - one_smallNumberExponent;
         // The timing here is really stressed. A fifth pipeline step could reduce stress here ...
-        if (one_exponentDiff >= MANTISSA_SIZE)
+        if (one_exponentDiff >= MANTISSA_SIZE[0 +: EXPONENT_SIZE])
         begin
             // If the small number is too small, set everything to zero
             one_smallNumberMantissa = 0;
