@@ -45,9 +45,13 @@ float inv_fast(float x) {
     w = x * v.f;
 
     // Efficient Iterative Approximation Improvement in horner polynomial form.
-    v.f = v.f * (2 - w);     // Single iteration, Err = -3.36e-3 * 2^(-flr(log2(x)))
+    // v.f = v.f * (2 - w);     // Single iteration, Err = -3.36e-3 * 2^(-flr(log2(x)))
     // v.f = v.f * ( 4 + w * (-6 + w * (4 - w)));  // Second iteration, Err = -1.13e-5 * 2^(-flr(log2(x)))
     // v.f = v.f * (8 + w * (-28 + w * (56 + w * (-70 + w *(56 + w * (-28 + w * (8 - w)))))));  // Third Iteration, Err = +-6.8e-8 *  2^(-flr(log2(x)))
+
+     v.f = v.f * (2 - x * v.f);
+    //  v.f = v.f * (2 - x * v.f);
+    //  v.f = v.f * (2 - x * v.f);
 
     return v.f * sx;
 }
@@ -60,19 +64,11 @@ TEST_CASE("Specific numbers", "[FloatFastRecip2]")
     {
         float a = (float)i * 0.001;
         top->in = *(uint32_t*)&a;
-        clk(top);
-        top->in = 0; // To test the pipeline
-        clk(top);
-        clk(top);
-        clk(top);
-        clk(top);
-        clk(top);
-        clk(top);
-        clk(top);
-        clk(top);
-        clk(top);
-        clk(top);
-        clk(top);
+        for (int j = 0; j < 12; j++)
+        {
+            clk(top);
+            top->in = 0; // To test the pipeline
+        }
         float out;
         *(uint32_t*)&out = top->out;
         float ref = inv_fast(a);

@@ -24,6 +24,7 @@
 module FloatFastRecip2
 # (
     parameter MANTISSA_SIZE = 23,
+    parameter ITERATIONS = 1,
     localparam EXPONENT_SIZE = 8, // To make the implementation a bit more simple, disallow exponent adaption
     localparam FLOAT_SIZE = 1 + EXPONENT_SIZE + MANTISSA_SIZE
 )
@@ -33,17 +34,60 @@ module FloatFastRecip2
     output wire [FLOAT_SIZE - 1 : 0] out
 );
     localparam MAGIC_NUMBER = 32'h7EF127EA >> (32 - FLOAT_SIZE);
-
-    localparam TWO_POINT_ZERO = 32'h40000000 >> (32 - FLOAT_SIZE); // float representation for 2.0
     localparam SIGN_POS = FLOAT_SIZE - 1;
 
     wire [FLOAT_SIZE - 1 : 0] inUnsigned = {1'b0, in[0 +: FLOAT_SIZE - 1]};
-    wire [FLOAT_SIZE - 1 : 0] v = MAGIC_NUMBER[0 +: FLOAT_SIZE] - inUnsigned;
-
-    wire [FLOAT_SIZE - 1 : 0] w;
-    wire [FLOAT_SIZE - 1 : 0] tmp;
+    wire [FLOAT_SIZE - 1 : 0] invEstimation = MAGIC_NUMBER[0 +: FLOAT_SIZE] - inUnsigned;
 
     wire [FLOAT_SIZE - 1 : 0] result;
+    wire                      signDelay;
+
+    wire [FLOAT_SIZE - 1 : 0] x [0 : ITERATIONS];
+    wire [FLOAT_SIZE - 1 : 0] iteration [0 : ITERATIONS];
+
+    ValueDelay #(.VALUE_SIZE(1), .DELAY(12 * ITERATIONS)) 
+        signDelayInst (.clk(clk), .in(in[SIGN_POS]), .out(signDelay));
+
+    assign x[0] = inUnsigned;
+    assign iteration[0] = invEstimation;
+
+    generate
+    genvar i;
+    for (i = 0; i < ITERATIONS; i = i + 1) begin : NewtonIterations
+        ReciprocalNewtonIteration #(
+            .MANTISSA_SIZE(MANTISSA_SIZE),
+            .EXPONENT_SIZE(EXPONENT_SIZE)
+        ) newtonIteration (
+            .clk(clk),
+            .x(x[i]),
+            .currentIteration(iteration[i]),
+            .newIteration(iteration[i + 1])
+        );
+
+        ValueDelay #(.VALUE_SIZE(FLOAT_SIZE), .DELAY(12)) 
+            xDelay (.clk(clk), .in(x[i]), .out(x[i + 1]));
+    end
+    endgenerate
+
+    assign out = {signDelay, iteration[ITERATIONS][0 +: FLOAT_SIZE - 1]};
+endmodule
+
+module ReciprocalNewtonIteration #(
+    parameter MANTISSA_SIZE = 23,
+    parameter EXPONENT_SIZE = 8, // To make the implementation a bit more simple, disallow exponent adaption
+    localparam FLOAT_SIZE = 1 + EXPONENT_SIZE + MANTISSA_SIZE
+)
+(
+    input  wire                      clk,
+    input  wire [FLOAT_SIZE - 1 : 0] x,
+    input  wire [FLOAT_SIZE - 1 : 0] currentIteration,
+    output wire [FLOAT_SIZE - 1 : 0] newIteration
+);
+    localparam TWO_POINT_ZERO = 32'h40000000 >> (32 - FLOAT_SIZE); // float representation for 2.0
+
+    wire [FLOAT_SIZE - 1 : 0] twoMinusX;
+    wire [FLOAT_SIZE - 1 : 0] currItMultX;
+    wire [FLOAT_SIZE - 1 : 0] currentIterationDelay;
 
     FloatMul 
     #(
@@ -53,9 +97,9 @@ module FloatFastRecip2
     floatMul 
     (
         .clk(clk),
-        .facAIn(inUnsigned),
-        .facBIn(v),
-        .prod(w)
+        .facAIn(x),
+        .facBIn(currentIteration),
+        .prod(currItMultX)
     );
 
     FloatSub
@@ -68,8 +112,8 @@ module FloatFastRecip2
     (
         .clk(clk),
         .aIn(TWO_POINT_ZERO[0 +: FLOAT_SIZE]),
-        .bIn(w),
-        .sum(tmp)
+        .bIn(currItMultX),
+        .sum(twoMinusX)
     );
 
     FloatMul 
@@ -80,29 +124,11 @@ module FloatFastRecip2
     floatMul2
     (
         .clk(clk),
-        .facAIn(vDelay[0]),
-        .facBIn(tmp),
-        .prod(result)
+        .facAIn(currentIterationDelay),
+        .facBIn(twoMinusX),
+        .prod(newIteration)
     );
 
-    // Used to delay some values
-    integer i;
-    reg [FLOAT_SIZE - 1 : 0]    vDelay [0 : 7];
-    reg                         signDelay[0 : 11];
-    always @(posedge clk)
-    begin
-        for (i = 0; i < 7; i = i + 1)
-        begin
-            vDelay[i] <= vDelay[i + 1];
-        end
-        vDelay[7] <= v;
-
-        for (i = 0; i < 11; i = i + 1)
-        begin
-            signDelay[i] <= signDelay[i + 1];
-        end
-        signDelay[11] <= in[SIGN_POS];
-    end
-
-    assign out = {signDelay[0], result[0 +: FLOAT_SIZE - 1]};
+    ValueDelay #(.VALUE_SIZE(FLOAT_SIZE), .DELAY(8)) 
+        currentIterationDelayer (.clk(clk), .in(currentIteration), .out(currentIterationDelay));
 endmodule
