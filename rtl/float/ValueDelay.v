@@ -30,14 +30,23 @@ module ValueDelay #(
     output wire [VALUE_SIZE - 1 : 0]    out
 );
     integer i;
-    reg  [VALUE_SIZE - 1 : 0] delay[0 : DELAY - 1];
-    always @(posedge clk)
-    begin
-        for (i = 0; i < DELAY - 1; i = i + 1)
+    generate 
+        if (DELAY > 0)
         begin
-            delay[i] <= delay[i + 1];
+            reg  [VALUE_SIZE - 1 : 0] delay[0 : DELAY - 1];
+            always @(posedge clk)
+            begin
+                for (i = 0; i < DELAY - 1; i = i + 1)
+                begin
+                    delay[i] <= delay[i + 1];
+                end
+                delay[DELAY - 1] <= in;
+            end
+            assign out = delay[0];
         end
-        delay[DELAY - 1] <= in;
-    end
-    assign out = delay[0];
+        else
+        begin
+            assign out = in;
+        end
+    endgenerate
 endmodule

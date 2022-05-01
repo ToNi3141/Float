@@ -20,11 +20,11 @@
 // This module uses an magic algorithm to calculate that. It is similar to the FloatFastRecip modul, but
 // this module is much more accurate with the disadvantage that it uses more logic and has much more delay.
 // Refer to https://en.wikipedia.org/wiki/Fast_inverse_square_root
-// This module has a latency of 12 clock cycles
+// This module has a latency of 24 clock cycles
 module FloatFastRecip2
 # (
     parameter MANTISSA_SIZE = 23,
-    parameter ITERATIONS = 1,
+    parameter ITERATIONS = 3, // Reduce the iterations to lower the latency. Each iterration requires 8 clk
     localparam EXPONENT_SIZE = 8, // To make the implementation a bit more simple, disallow exponent adaption
     localparam FLOAT_SIZE = 1 + EXPONENT_SIZE + MANTISSA_SIZE
 )
@@ -35,6 +35,7 @@ module FloatFastRecip2
 );
     localparam MAGIC_NUMBER = 32'h7EF127EA >> (32 - FLOAT_SIZE);
     localparam SIGN_POS = FLOAT_SIZE - 1;
+    localparam DELAY = 8;
 
     wire [FLOAT_SIZE - 1 : 0] inUnsigned = {1'b0, in[0 +: FLOAT_SIZE - 1]};
     wire [FLOAT_SIZE - 1 : 0] invEstimation = MAGIC_NUMBER[0 +: FLOAT_SIZE] - inUnsigned;
@@ -45,7 +46,7 @@ module FloatFastRecip2
     wire [FLOAT_SIZE - 1 : 0] x [0 : ITERATIONS];
     wire [FLOAT_SIZE - 1 : 0] iteration [0 : ITERATIONS];
 
-    ValueDelay #(.VALUE_SIZE(1), .DELAY(12 * ITERATIONS)) 
+    ValueDelay #(.VALUE_SIZE(1), .DELAY(DELAY * ITERATIONS)) 
         signDelayInst (.clk(clk), .in(in[SIGN_POS]), .out(signDelay));
 
     assign x[0] = inUnsigned;
@@ -64,7 +65,7 @@ module FloatFastRecip2
             .newIteration(iteration[i + 1])
         );
 
-        ValueDelay #(.VALUE_SIZE(FLOAT_SIZE), .DELAY(12)) 
+        ValueDelay #(.VALUE_SIZE(FLOAT_SIZE), .DELAY(DELAY)) 
             xDelay (.clk(clk), .in(x[i]), .out(x[i + 1]));
     end
     endgenerate
@@ -92,7 +93,8 @@ module ReciprocalNewtonIteration #(
     FloatMul 
     #(
         .MANTISSA_SIZE(MANTISSA_SIZE),
-        .EXPONENT_SIZE(EXPONENT_SIZE)
+        .EXPONENT_SIZE(EXPONENT_SIZE),
+        .DELAY(0)
     ) 
     floatMul 
     (
@@ -119,7 +121,8 @@ module ReciprocalNewtonIteration #(
     FloatMul 
     #(
         .MANTISSA_SIZE(MANTISSA_SIZE),
-        .EXPONENT_SIZE(EXPONENT_SIZE)
+        .EXPONENT_SIZE(EXPONENT_SIZE),
+        .DELAY(0)
     ) 
     floatMul2
     (
@@ -129,6 +132,6 @@ module ReciprocalNewtonIteration #(
         .prod(newIteration)
     );
 
-    ValueDelay #(.VALUE_SIZE(FLOAT_SIZE), .DELAY(8)) 
+    ValueDelay #(.VALUE_SIZE(FLOAT_SIZE), .DELAY(6)) 
         currentIterationDelayer (.clk(clk), .in(currentIteration), .out(currentIterationDelay));
 endmodule

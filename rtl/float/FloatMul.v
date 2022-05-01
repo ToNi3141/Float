@@ -22,13 +22,14 @@ module FloatMul
 # (
     parameter MANTISSA_SIZE = 23,
     parameter EXPONENT_SIZE = 8,
+    parameter DELAY = 2, // Reduces the delay to 2 clock cycles
     localparam FLOAT_SIZE = 1 + EXPONENT_SIZE + MANTISSA_SIZE
 )
 (
     input  wire                      clk,
     input  wire [FLOAT_SIZE - 1 : 0] facAIn,
     input  wire [FLOAT_SIZE - 1 : 0] facBIn,
-    output reg  [FLOAT_SIZE - 1 : 0] prod
+    output wire [FLOAT_SIZE - 1 : 0] prod
 );
     localparam MANTISSA_POS = 0;
     localparam EXPONENT_POS = MANTISSA_SIZE;
@@ -42,6 +43,8 @@ module FloatMul
     localparam EXPONENT_SUM_ADDITIONAL_BITS = 1 + 1; // Add one bit for sign and one for overflow
     localparam EXPONENT_SUM_SIZE = EXPONENT_SIZE + EXPONENT_SUM_ADDITIONAL_BITS; 
 
+    reg  [FLOAT_SIZE - 1 : 0] prodReg;
+
     reg                               one_facASign;
     reg                               one_facBSign;
     reg  [EXPONENT_SUM_SIZE - 1 : 0]  one_facAExponent;
@@ -49,8 +52,20 @@ module FloatMul
     reg  [MANTISSA_CALC_SIZE - 1 : 0] one_facAMantissa;
     reg  [MANTISSA_CALC_SIZE - 1 : 0] one_facBMantissa;
     reg  [MANTISSA_CALC_SIZE - 1 : 0] one_facBMantissaDenormalized;
+
+    reg  [MANTISSA_PROD_SIZE - 1 : 0] two_mantissaProd;
+    reg                               two_mantissaProdSign;
+    reg  [EXPONENT_SIZE - 1 : 0]      two_facAExponent;
+    reg  [EXPONENT_SIZE - 1 : 0]      two_facBExponent;
+    reg  [EXPONENT_SIZE - 1 : 0]      two_exponentSum;
+    reg                               two_exponentUnderflow;
+    reg                               two_exponentOverflow;
+
     always @(posedge clk)
-    begin : UnpackAndAdapt
+    begin : UnpackAndCalc
+
+        reg signed [EXPONENT_SUM_SIZE - 1 : 0]  sumExponent;
+        // Unpack
         reg  [FLOAT_SIZE - 1 : 0] facA;
         reg  [FLOAT_SIZE - 1 : 0] facB;
         reg                       expFacBGreaterThanZero;
@@ -69,23 +84,14 @@ module FloatMul
 
         facAMantissa = {expFacAGreaterThanZero, facA[MANTISSA_POS +: MANTISSA_SIZE]};
         facBMantissa = {expFacBGreaterThanZero, facB[MANTISSA_POS +: MANTISSA_SIZE]};
-        one_facASign <= facA[SIGN_POS];
-        one_facBSign <= facB[SIGN_POS];
+        one_facASign = facA[SIGN_POS];
+        one_facBSign = facB[SIGN_POS];
 
-        one_facAMantissa <= facAMantissa;
-        one_facBMantissa <= facBMantissa;
-    end
+        one_facAMantissa = facAMantissa;
+        one_facBMantissa = facBMantissa;
 
-    reg  [MANTISSA_PROD_SIZE - 1 : 0] two_mantissaProd;
-    reg                               two_mantissaProdSign;
-    reg  [EXPONENT_SIZE - 1 : 0]      two_facAExponent;
-    reg  [EXPONENT_SIZE - 1 : 0]      two_facBExponent;
-    reg  [EXPONENT_SIZE - 1 : 0]      two_exponentSum;
-    reg                               two_exponentUnderflow;
-    reg                               two_exponentOverflow;
-    always @(posedge clk)
-    begin : Calc
-        reg signed [EXPONENT_SUM_SIZE - 1 : 0]  sumExponent;
+        // calc
+        
 
         // Calculate the mantissa product
         two_mantissaProd <= one_facBMantissa * one_facAMantissa;
@@ -119,26 +125,6 @@ module FloatMul
         two_facAExponent <= one_facAExponent[0 +: EXPONENT_SIZE];
         two_facBExponent <= one_facBExponent[0 +: EXPONENT_SIZE];
     end
-    
-    // Bubble cylce to add one clock latency. 
-    // Reason: I want to have the same amout of latency in the multiplication like i have in the addition
-    reg  [EXPONENT_SIZE - 1 : 0]      three_facAExponent;
-    reg  [EXPONENT_SIZE - 1 : 0]      three_facBExponent;
-    reg  [MANTISSA_PROD_SIZE - 1 : 0] three_prodMantissa;
-    reg                               three_prodMantissaSign;
-    reg  [EXPONENT_SIZE - 1 : 0]      three_exponentSum;
-    reg                               three_exponentUnderflow;
-    reg                               three_exponentOverflow;
-    always @(posedge clk)
-    begin
-        three_facAExponent <= two_facAExponent;
-        three_facBExponent <= two_facBExponent;
-        three_prodMantissa <= two_mantissaProd;
-        three_prodMantissaSign <= two_mantissaProdSign;
-        three_exponentSum <= two_exponentSum;
-        three_exponentUnderflow <= two_exponentUnderflow;
-        three_exponentOverflow <= two_exponentOverflow;
-    end
 
     always @(posedge clk)
     begin : Pack
@@ -148,17 +134,17 @@ module FloatMul
         reg                          normalizationRequired;
         reg                          mantissaOverlow;
 
-        normalizationRequired = (three_facAExponent != 0) || (three_facBExponent != 0);
-        mantissaOverlow = three_prodMantissa[(MANTISSA_SIZE * 2) + 1];
+        normalizationRequired = (two_facAExponent != 0) || (two_facBExponent != 0);
+        mantissaOverlow = two_mantissaProd[(MANTISSA_SIZE * 2) + 1];
 
         // Check if the exponent underflows (for instance when you multiply two numbers where the result is too small to encode)
-        if (three_exponentUnderflow)
+        if (two_exponentUnderflow)
         begin
             exponentSum = 0;
             mantissaNormalized = 0;
         end
         // Check if the exponent overflows (for instance when you multiply two numbers where the result is too big to encode)
-        else if (three_exponentOverflow)
+        else if (two_exponentOverflow)
         begin
             exponentSum = EXPONENT_INF;
             mantissaNormalized = 0;
@@ -170,7 +156,7 @@ module FloatMul
             if (normalizationRequired)
             begin
                 // Standard case where we have a normalized mantissa. In this case we can just use the calculated sum.
-                exponentSumTmp = three_exponentSum + {{EXPONENT_SIZE{1'b0}}, mantissaOverlow};
+                exponentSumTmp = two_exponentSum + {{EXPONENT_SIZE{1'b0}}, mantissaOverlow};
             end
             else
             begin
@@ -187,15 +173,18 @@ module FloatMul
             end
             else if (normalizationRequired)
             begin
-                mantissaNormalized = three_prodMantissa >> ({{(MANTISSA_PROD_SIZE - MANTISSA_SIZE){1'b0}}, MANTISSA_SIZE[0 +: MANTISSA_SIZE]} 
+                mantissaNormalized = two_mantissaProd >> ({{(MANTISSA_PROD_SIZE - MANTISSA_SIZE){1'b0}}, MANTISSA_SIZE[0 +: MANTISSA_SIZE]} 
                                                                  + {{(MANTISSA_PROD_SIZE - 1){1'b0}}, mantissaOverlow});
             end
             else 
             begin
-                mantissaNormalized = three_prodMantissa;
+                mantissaNormalized = two_mantissaProd;
             end
         end
 
-        prod <= {three_prodMantissaSign, exponentSum, mantissaNormalized[0 +: MANTISSA_SIZE]};
+        prodReg <= {two_mantissaProdSign, exponentSum, mantissaNormalized[0 +: MANTISSA_SIZE]};
     end
+
+    ValueDelay #(.VALUE_SIZE(FLOAT_SIZE), .DELAY(DELAY)) 
+        currentIterationDelayer (.clk(clk), .in(prodReg), .out(prod));
 endmodule
