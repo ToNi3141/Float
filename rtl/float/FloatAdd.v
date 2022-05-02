@@ -35,7 +35,7 @@ module FloatAdd
     localparam EXPONENT_POS = MANTISSA_SIZE;
     localparam SIGN_POS = EXPONENT_POS + EXPONENT_SIZE;
   
-    localparam EXPONENT_INVALID_VALUE = (2**EXPONENT_SIZE) - 1;
+    localparam EXPONENT_INVALID_VALUE = (2 ** EXPONENT_SIZE) - 1;
 
     localparam MANTISSA_CALC_SIZE = MANTISSA_SIZE + 3; // Adding sign, first digit, one bit for overflowing
     localparam MANTISSA_CALC_SIGN_POS = MANTISSA_CALC_SIZE - 1;
