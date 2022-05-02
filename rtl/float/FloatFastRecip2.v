@@ -16,16 +16,18 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Floating point reciprocal
-// This module is pipelined. It can calculate one reciprocal per clock
-// This module uses an magic algorithm to calculate that. It is similar to the FloatFastRecip modul, but
-// this module is much more accurate with the disadvantage that it uses more logic and has much more delay.
+// This module is pipelined. It can calculate one reciprocal per clock.
+// To get a first approximation of 1/x, it uses some magic number. See the following link:
 // Refer to https://en.wikipedia.org/wiki/Fast_inverse_square_root
-// This module has a latency of 24 clock cycles
+// Later it does newton iterations reduce the error of the initial approximation. The number
+// of iterations can be adapted to get the best tradeoff between logic utilization and accuracy.
+// This module has by default a latency of 24 clock cycles (3 iterations)
+// Minimum is one iteration (8 clock cycles of delay)
 module FloatFastRecip2
 # (
     parameter MANTISSA_SIZE = 23,
-    parameter ITERATIONS = 3, // Reduce the iterations to lower the latency. Each iterration requires 8 clk
-    localparam EXPONENT_SIZE = 8, // To make the implementation a bit more simple, disallow exponent adaption
+    parameter ITERATIONS = 3, // Reduce the iterations to lower the latency. Each iteration requires 8 clock cycles
+    localparam EXPONENT_SIZE = 8, // To avoid problems with the MAGIC_NUMBER, disable the configuration of the exponent
     localparam FLOAT_SIZE = 1 + EXPONENT_SIZE + MANTISSA_SIZE
 )
 (
@@ -54,7 +56,8 @@ module FloatFastRecip2
 
     generate
     genvar i;
-    for (i = 0; i < ITERATIONS; i = i + 1) begin : NewtonIterations
+    for (i = 0; i < ITERATIONS; i = i + 1) 
+    begin : NewtonIterations
         ReciprocalNewtonIteration #(
             .MANTISSA_SIZE(MANTISSA_SIZE),
             .EXPONENT_SIZE(EXPONENT_SIZE)
@@ -75,7 +78,7 @@ endmodule
 
 module ReciprocalNewtonIteration #(
     parameter MANTISSA_SIZE = 23,
-    parameter EXPONENT_SIZE = 8, // To make the implementation a bit more simple, disallow exponent adaption
+    parameter EXPONENT_SIZE = 8,
     localparam FLOAT_SIZE = 1 + EXPONENT_SIZE + MANTISSA_SIZE
 )
 (

@@ -50,9 +50,9 @@ float inv_fast(float x) {
     // v.f = v.f * (8 + w * (-28 + w * (56 + w * (-70 + w *(56 + w * (-28 + w * (8 - w)))))));  // Third Iteration, Err = +-6.8e-8 *  2^(-flr(log2(x)))
 
     // Approximation as newton polynom
-     v.f = v.f * (2 - x * v.f);
-     v.f = v.f * (2 - x * v.f);
-     v.f = v.f * (2 - x * v.f);
+    v.f = v.f * (2 - x * v.f);
+    v.f = v.f * (2 - x * v.f);
+    v.f = v.f * (2 - x * v.f);
 
     return v.f * sx;
 }
@@ -63,10 +63,7 @@ TEST_CASE("Specific numbers", "[FloatFastRecip2]")
 
     for (int i = -1000000; i < 1000000; i++)
     {
-        // TODO: The library currently has a bug with inf and nan.
-        // The verilog code reports inf, the test reports nan
-        if (i == 0)
-            continue;
+
 
         float a = (float)i * 0.001;
         top->in = *(uint32_t*)&a;
@@ -78,7 +75,13 @@ TEST_CASE("Specific numbers", "[FloatFastRecip2]")
         float out;
         *(uint32_t*)&out = top->out;
         float ref = inv_fast(a);
-        REQUIRE(Approx(out).epsilon(0.000001) == ref);
+        // TODO: The library currently has a bug with inf and nan.
+        // The verilog code reports inf, the test reports nan. For now, just handle this case a bit different. 
+        // In the future, both implementations should report the same.
+        if (i == 0)
+            REQUIRE(out == std::numeric_limits<float>::infinity());
+        else
+            REQUIRE(Approx(out).epsilon(0.000001) == ref);
     }
 
     // Final model cleanup

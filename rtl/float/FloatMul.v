@@ -43,38 +43,38 @@ module FloatMul
     localparam EXPONENT_SUM_ADDITIONAL_BITS = 1 + 1; // Add one bit for sign and one for overflow
     localparam EXPONENT_SUM_SIZE = EXPONENT_SIZE + EXPONENT_SUM_ADDITIONAL_BITS; 
 
-    reg  [FLOAT_SIZE - 1 : 0] prodReg;
+    reg  [FLOAT_SIZE - 1 : 0]           prodReg;
 
-    reg                               one_facASign;
-    reg                               one_facBSign;
-    reg  [EXPONENT_SUM_SIZE - 1 : 0]  one_facAExponent;
-    reg  [EXPONENT_SUM_SIZE - 1 : 0]  one_facBExponent;
-    reg  [MANTISSA_CALC_SIZE - 1 : 0] one_facAMantissa;
-    reg  [MANTISSA_CALC_SIZE - 1 : 0] one_facBMantissa;
-    reg  [MANTISSA_CALC_SIZE - 1 : 0] one_facBMantissaDenormalized;
-
-    reg  [MANTISSA_PROD_SIZE - 1 : 0] two_mantissaProd;
-    reg                               two_mantissaProdSign;
-    reg  [EXPONENT_SIZE - 1 : 0]      two_facAExponent;
-    reg  [EXPONENT_SIZE - 1 : 0]      two_facBExponent;
-    reg  [EXPONENT_SIZE - 1 : 0]      two_exponentSum;
-    reg                               two_exponentUnderflow;
-    reg                               two_exponentOverflow;
-
+    reg  [EXPONENT_SUM_SIZE - 1 : 0]    one_facAExponent;
+    reg  [EXPONENT_SUM_SIZE - 1 : 0]    one_facBExponent;
+    reg  [MANTISSA_PROD_SIZE - 1 : 0]   one_mantissaProd;
+    reg                                 one_mantissaProdSign;
+    reg  [EXPONENT_SIZE - 1 : 0]        one_exponentSum;
+    reg                                 one_exponentUnderflow;
+    reg                                 one_exponentOverflow;
     always @(posedge clk)
-    begin : UnpackAndCalc
-
-        reg signed [EXPONENT_SUM_SIZE - 1 : 0]  sumExponent;
+    begin : UnpackAndCompute
         // Unpack
-        reg  [FLOAT_SIZE - 1 : 0] facA;
-        reg  [FLOAT_SIZE - 1 : 0] facB;
-        reg                       expFacBGreaterThanZero;
-        reg                       expFacAGreaterThanZero;
+        reg  [FLOAT_SIZE - 1 : 0]   facA;
+        reg  [FLOAT_SIZE - 1 : 0]   facB;
+        reg                         expFacBGreaterThanZero;
+        reg                         expFacAGreaterThanZero;
         reg  [MANTISSA_CALC_SIZE - 1 : 0] facAMantissa;
         reg  [MANTISSA_CALC_SIZE - 1 : 0] facBMantissa;
+        reg                         facASign;
+        reg                         facBSign;
+        // Compute
+        reg signed [EXPONENT_SUM_SIZE - 1 : 0]  sumExponent;
+
+        //////////////////////////////////////
+        // Unpack
+        //////////////////////////////////////
 
         facA = facBIn;
         facB = facAIn;
+
+        facASign = facA[SIGN_POS];
+        facBSign = facB[SIGN_POS];
 
         one_facAExponent = {{EXPONENT_SUM_ADDITIONAL_BITS{1'b0}}, facA[EXPONENT_POS +: EXPONENT_SIZE]};
         one_facBExponent = {{EXPONENT_SUM_ADDITIONAL_BITS{1'b0}}, facB[EXPONENT_POS +: EXPONENT_SIZE]};
@@ -84,46 +84,39 @@ module FloatMul
 
         facAMantissa = {expFacAGreaterThanZero, facA[MANTISSA_POS +: MANTISSA_SIZE]};
         facBMantissa = {expFacBGreaterThanZero, facB[MANTISSA_POS +: MANTISSA_SIZE]};
-        one_facASign = facA[SIGN_POS];
-        one_facBSign = facB[SIGN_POS];
 
-        one_facAMantissa = facAMantissa;
-        one_facBMantissa = facBMantissa;
+        //////////////////////////////////////
+        // Compute
+        //////////////////////////////////////
 
-        // calc
-        
+        // Compute the mantissa product
+        one_mantissaProd <= facBMantissa * facAMantissa;
 
-        // Calculate the mantissa product
-        two_mantissaProd <= one_facBMantissa * one_facAMantissa;
+        // Compute the sign of the product
+        one_mantissaProdSign <= facASign ^ facBSign;
 
-        // Calculate the exponent
+        // Compute the exponent
         sumExponent = $signed(one_facBExponent) + ($signed(one_facAExponent) - EXPONENT_BIAS);
         
         // Clamp the exponent
-        if ((sumExponent < 0) || (one_facBMantissa == 0) || (one_facAMantissa == 0))
+        if ((sumExponent < 0) || (facBMantissa == 0) || (facAMantissa == 0))
         begin
-            two_exponentUnderflow <= 1;
-            two_exponentOverflow <= 0;
-            two_exponentSum <= 0;
+            one_exponentUnderflow <= 1;
+            one_exponentOverflow <= 0;
+            one_exponentSum <= 0;
         end
         else if (sumExponent >= EXPONENT_INF)
         begin
-            two_exponentUnderflow <= 0;
-            two_exponentOverflow <= 1;
-            two_exponentSum <= EXPONENT_INF;
+            one_exponentUnderflow <= 0;
+            one_exponentOverflow <= 1;
+            one_exponentSum <= EXPONENT_INF;
         end
         else 
         begin
-            two_exponentUnderflow <= 0;
-            two_exponentOverflow <= 0;
-            two_exponentSum <= sumExponent[0 +: EXPONENT_SIZE];
+            one_exponentUnderflow <= 0;
+            one_exponentOverflow <= 0;
+            one_exponentSum <= sumExponent[0 +: EXPONENT_SIZE];
         end
-
-        // Safe the sign of the product
-        two_mantissaProdSign <= one_facASign ^ one_facBSign;
-
-        two_facAExponent <= one_facAExponent[0 +: EXPONENT_SIZE];
-        two_facBExponent <= one_facBExponent[0 +: EXPONENT_SIZE];
     end
 
     always @(posedge clk)
@@ -134,17 +127,17 @@ module FloatMul
         reg                          normalizationRequired;
         reg                          mantissaOverlow;
 
-        normalizationRequired = (two_facAExponent != 0) || (two_facBExponent != 0);
-        mantissaOverlow = two_mantissaProd[(MANTISSA_SIZE * 2) + 1];
+        normalizationRequired = (one_facAExponent != 0) || (one_facBExponent != 0);
+        mantissaOverlow = one_mantissaProd[(MANTISSA_SIZE * 2) + 1];
 
         // Check if the exponent underflows (for instance when you multiply two numbers where the result is too small to encode)
-        if (two_exponentUnderflow)
+        if (one_exponentUnderflow)
         begin
             exponentSum = 0;
             mantissaNormalized = 0;
         end
         // Check if the exponent overflows (for instance when you multiply two numbers where the result is too big to encode)
-        else if (two_exponentOverflow)
+        else if (one_exponentOverflow)
         begin
             exponentSum = EXPONENT_INF;
             mantissaNormalized = 0;
@@ -156,7 +149,7 @@ module FloatMul
             if (normalizationRequired)
             begin
                 // Standard case where we have a normalized mantissa. In this case we can just use the calculated sum.
-                exponentSumTmp = two_exponentSum + {{EXPONENT_SIZE{1'b0}}, mantissaOverlow};
+                exponentSumTmp = one_exponentSum + {{EXPONENT_SIZE{1'b0}}, mantissaOverlow};
             end
             else
             begin
@@ -173,16 +166,16 @@ module FloatMul
             end
             else if (normalizationRequired)
             begin
-                mantissaNormalized = two_mantissaProd >> ({{(MANTISSA_PROD_SIZE - MANTISSA_SIZE){1'b0}}, MANTISSA_SIZE[0 +: MANTISSA_SIZE]} 
+                mantissaNormalized = one_mantissaProd >> ({{(MANTISSA_PROD_SIZE - MANTISSA_SIZE){1'b0}}, MANTISSA_SIZE[0 +: MANTISSA_SIZE]} 
                                                                  + {{(MANTISSA_PROD_SIZE - 1){1'b0}}, mantissaOverlow});
             end
             else 
             begin
-                mantissaNormalized = two_mantissaProd;
+                mantissaNormalized = one_mantissaProd;
             end
         end
 
-        prodReg <= {two_mantissaProdSign, exponentSum, mantissaNormalized[0 +: MANTISSA_SIZE]};
+        prodReg <= {one_mantissaProdSign, exponentSum, mantissaNormalized[0 +: MANTISSA_SIZE]};
     end
 
     ValueDelay #(.VALUE_SIZE(FLOAT_SIZE), .DELAY(DELAY)) 

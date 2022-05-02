@@ -8,7 +8,7 @@ Goal was to use as less clock cycles as possible and still get a reasonable perf
 - __One operation per clock__ (all operations are __pipelined__)
 - Latency: __4 Clock cycles__ (except FloatFastRecip2 which requires 12)
 - FloatFastRecip to get a fast approximation for ```1/x``` (error is around 5%)
-- FloatFastRecip2 to get a more accurate approximation for ```1/x``` but at the cost of utilization and delay (error is around 0.01%)
+- FloatFastRecip2 to get a more accurate approximation for ```1/x``` but at the cost of utilization and delay. It uses the newton method to approximate ```1/x```. To get more accurate approximations, the newton iterations can be increased. It is still fully pipelined but the utilization grows.
 - IEEE 754 compatible but not compliant
 - All IEEE 754 formats are supported like: half (s=1, e=5, m=10), single (s=1, e=8, m=23), double (s=1, e=11, m=52), ...
 
