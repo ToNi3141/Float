@@ -79,8 +79,8 @@ module FloatMul
         one_facAExponent = {{EXPONENT_SUM_ADDITIONAL_BITS{1'b0}}, facA[EXPONENT_POS +: EXPONENT_SIZE]};
         one_facBExponent = {{EXPONENT_SUM_ADDITIONAL_BITS{1'b0}}, facB[EXPONENT_POS +: EXPONENT_SIZE]};
 
-        expFacBGreaterThanZero = one_facBExponent > 0;
-        expFacAGreaterThanZero = one_facAExponent > 0;
+        expFacBGreaterThanZero = |one_facBExponent;
+        expFacAGreaterThanZero = |one_facAExponent;
 
         facAMantissa = {expFacAGreaterThanZero, facA[MANTISSA_POS +: MANTISSA_SIZE]};
         facBMantissa = {expFacBGreaterThanZero, facB[MANTISSA_POS +: MANTISSA_SIZE]};

@@ -21,8 +21,8 @@
 // Refer to https://en.wikipedia.org/wiki/Fast_inverse_square_root
 // Later it does newton iterations reduce the error of the initial approximation. The number
 // of iterations can be adapted to get the best tradeoff between logic utilization and accuracy.
-// This module has by default a latency of 24 clock cycles (3 iterations)
-// Minimum is one iteration (8 clock cycles of delay)
+// This module has by default a latency of 24 + 1 clock cycles (3 iterations)
+// Minimum is one iteration (8 + 1 clock cycles of delay)
 module FloatFastRecip2
 # (
     parameter MANTISSA_SIZE = 23,
@@ -42,17 +42,26 @@ module FloatFastRecip2
     wire [FLOAT_SIZE - 1 : 0] inUnsigned = {1'b0, in[0 +: FLOAT_SIZE - 1]};
     wire [FLOAT_SIZE - 1 : 0] invEstimation = MAGIC_NUMBER[0 +: FLOAT_SIZE] - inUnsigned;
 
+    reg  [FLOAT_SIZE - 1 : 0] inUnsignedReg;
+    reg  [FLOAT_SIZE - 1 : 0] invEstimationReg;
+
     wire [FLOAT_SIZE - 1 : 0] result;
     wire                      signDelay;
 
     wire [FLOAT_SIZE - 1 : 0] x [0 : ITERATIONS];
     wire [FLOAT_SIZE - 1 : 0] iteration [0 : ITERATIONS];
 
-    ValueDelay #(.VALUE_SIZE(1), .DELAY(DELAY * ITERATIONS)) 
+    ValueDelay #(.VALUE_SIZE(1), .DELAY((DELAY * ITERATIONS) + 1)) 
         signDelayInst (.clk(clk), .in(in[SIGN_POS]), .out(signDelay));
 
-    assign x[0] = inUnsigned;
-    assign iteration[0] = invEstimation;
+    always @(posedge clk)
+    begin
+        inUnsignedReg <= inUnsigned;
+        invEstimationReg <= invEstimation;
+    end
+
+    assign x[0] = inUnsignedReg;
+    assign iteration[0] = invEstimationReg;
 
     generate
     genvar i;
