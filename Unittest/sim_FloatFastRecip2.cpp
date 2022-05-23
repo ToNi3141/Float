@@ -63,11 +63,9 @@ TEST_CASE("Specific numbers", "[FloatFastRecip2]")
 
     for (int i = -1000000; i < 1000000; i++)
     {
-
-
         float a = (float)i * 0.001;
         top->in = *(uint32_t*)&a;
-        for (int j = 0; j < 24; j++)
+        for (int j = 0; j < 25; j++)
         {
             clk(top);
             top->in = 0; // To test the pipeline
