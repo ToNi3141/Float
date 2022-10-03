@@ -17,12 +17,12 @@
 
 // Floating point multiplication
 // This module is pipelined. It can calculate one multiplication per clock
-// This module has a latency of 4 clock cycles
+// This module has a latency of 2 clock cycles minimum
 module FloatMul
 # (
     parameter MANTISSA_SIZE = 23,
     parameter EXPONENT_SIZE = 8,
-    parameter DELAY = 2, // Reduces the delay to 2 clock cycles
+    parameter DELAY = 2, // Use this delay to add clock cycles. It adds by default 2 clock cycles, so that the multiplier requieres 4 clocks.
     localparam FLOAT_SIZE = 1 + EXPONENT_SIZE + MANTISSA_SIZE
 )
 (

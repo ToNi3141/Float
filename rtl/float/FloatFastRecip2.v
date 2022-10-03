@@ -21,8 +21,8 @@
 // Refer to https://en.wikipedia.org/wiki/Fast_inverse_square_root
 // Later it does newton iterations reduce the error of the initial approximation. The number
 // of iterations can be adapted to get the best tradeoff between logic utilization and accuracy.
-// This module has by default a latency of 24 + 1 clock cycles (3 iterations)
-// Minimum is one iteration (8 + 1 clock cycles of delay)
+// This module has by default a latency of 18 + 1 clock cycles (3 iterations)
+// Minimum is one iteration (6 + 1 clock cycles of delay)
 module FloatFastRecip2
 # (
     parameter MANTISSA_SIZE = 23,
