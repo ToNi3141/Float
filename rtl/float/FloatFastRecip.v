@@ -32,11 +32,18 @@ module FloatFastRecip
     output wire [FLOAT_SIZE - 1 : 0] out
 );
     localparam MAGIC_NUMBER = 32'hbe6eb3be >> (32 - FLOAT_SIZE); // Some magic number
-    wire [FLOAT_SIZE - 1 : 0] inSub = (MAGIC_NUMBER[0 +: FLOAT_SIZE] - in) >> 1;
+    reg [FLOAT_SIZE - 1 : 0] inSub;
+
+    always @(posedge clk)
+    begin
+        inSub <= (MAGIC_NUMBER[0 +: FLOAT_SIZE] - in) >> 1;
+    end
+
     FloatMul 
     #(
         .MANTISSA_SIZE(MANTISSA_SIZE),
-        .EXPONENT_SIZE(EXPONENT_SIZE)
+        .EXPONENT_SIZE(EXPONENT_SIZE),
+        .DELAY(1)
     ) 
     floatMul 
     (
