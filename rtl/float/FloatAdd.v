@@ -35,16 +35,18 @@ module FloatAdd
     localparam EXPONENT_POS = MANTISSA_SIZE;
     localparam SIGN_POS = EXPONENT_POS + EXPONENT_SIZE;
   
-    localparam EXPONENT_INVALID_VALUE = (2 ** EXPONENT_SIZE) - 1;
+    
 
-    localparam MANTISSA_CALC_SIZE = MANTISSA_SIZE + 3; // Adding sign, first digit, one bit for overflowing
+    localparam MANTISSA_CALC_SIZE = MANTISSA_SIZE + 3; // Adding sign, first digit, one bit for overflow
     localparam MANTISSA_CALC_SIGN_POS = MANTISSA_CALC_SIZE - 1;
     localparam MANTISSA_CALC_ONE_POS = MANTISSA_SIZE + 1;
     localparam MANTISSA_WIDTH_LOG2 = $clog2(MANTISSA_SIZE);
+    localparam MANTISSA_ONE_POS_SIZE = $clog2(MANTISSA_SIZE) + 1;
+    localparam EXPONENT_INVALID_VALUE = (2 ** MANTISSA_ONE_POS_SIZE) - 1;
 
 
-    wire [EXPONENT_SIZE - 1 : 0] exponentCorrection;
-    FindExponent #(.EXPONENT_SIZE(EXPONENT_SIZE), .VALUE_SIZE(MANTISSA_CALC_SIZE)) findExponent (two_mantissaSum, exponentCorrection);
+    wire [MANTISSA_ONE_POS_SIZE - 1 : 0] exponentCorrection;
+    FindExponent #(.EXPONENT_SIZE(MANTISSA_ONE_POS_SIZE), .VALUE_SIZE(MANTISSA_CALC_SIZE)) findExponent (two_mantissaSum, exponentCorrection);
 
     reg                               one_bigNumberSign;
     reg                               one_smallNumberSign;
@@ -164,11 +166,11 @@ module FloatAdd
         two_smallNumberExponent <= one_smallNumberExponent;
     end
     
-    reg  [EXPONENT_SIZE - 1 : 0]      three_bigNumberExponent;
-    reg  [EXPONENT_SIZE - 1 : 0]      three_smallNumberExponent;
-    reg  [MANTISSA_CALC_SIZE - 1 : 0] three_sumMantissa;
-    reg                               three_sumMantissaSign;
-    reg  [EXPONENT_SIZE - 1 : 0]      three_exponentCorrection;
+    reg  [EXPONENT_SIZE - 1 : 0]            three_bigNumberExponent;
+    reg  [EXPONENT_SIZE - 1 : 0]            three_smallNumberExponent;
+    reg  [MANTISSA_CALC_SIZE - 1 : 0]       three_sumMantissa;
+    reg                                     three_sumMantissaSign;
+    reg  [MANTISSA_ONE_POS_SIZE - 1 : 0]    three_exponentCorrection;
     always @(posedge clk)
     begin
         three_bigNumberExponent <= two_bigNumberExponent;
@@ -187,19 +189,19 @@ module FloatAdd
         // No one was found in the mantissa 
         // Or the exponent of both numbers was zero and the mantissa is till too small to increment the exponent
         if ((three_exponentCorrection == EXPONENT_INVALID_VALUE) 
-            || ((three_bigNumberExponent == 0) && (three_smallNumberExponent == 0) && (three_exponentCorrection < MANTISSA_SIZE[0 +: EXPONENT_SIZE])))
+            || ((three_bigNumberExponent == 0) && (three_smallNumberExponent == 0) && (three_exponentCorrection < MANTISSA_SIZE[0 +: MANTISSA_ONE_POS_SIZE])))
         begin
             sumExponent = 0;
         end
         // Both exponents are zero but the mantissa is big enough to increment the exponent
-        else if ((three_bigNumberExponent == 0) && (three_smallNumberExponent == 0) && (three_exponentCorrection == MANTISSA_SIZE[0 +: EXPONENT_SIZE]))
+        else if ((three_bigNumberExponent == 0) && (three_smallNumberExponent == 0) && (three_exponentCorrection == MANTISSA_SIZE[0 +: MANTISSA_ONE_POS_SIZE]))
         begin
             sumExponent = 1;
         end
         // The mantissa got smaller, so the new expoent has to be decremented
-        else if (three_exponentCorrection < MANTISSA_SIZE[0 +: EXPONENT_SIZE])
+        else if (three_exponentCorrection < MANTISSA_SIZE[0 +: MANTISSA_ONE_POS_SIZE])
         begin
-            sumExponent = three_bigNumberExponent - (MANTISSA_SIZE[0 +: EXPONENT_SIZE] - three_exponentCorrection);
+            sumExponent = three_bigNumberExponent - {{(EXPONENT_SIZE - MANTISSA_ONE_POS_SIZE){1'h0}}, (MANTISSA_SIZE[0 +: MANTISSA_ONE_POS_SIZE] - three_exponentCorrection)};
         end
         // In all other cases, the exponent can be incremented
         else 
@@ -209,7 +211,7 @@ module FloatAdd
 
         // Check if we have to shift the mantissa
         // If the small number was already a denormalized number and the mantissa is still normalized, then we don't need to do anything with the mantissa.
-        if ((three_smallNumberExponent == 0) && (three_exponentCorrection < MANTISSA_SIZE[0 +: EXPONENT_SIZE]))
+        if ((three_smallNumberExponent == 0) && (three_exponentCorrection < MANTISSA_SIZE[0 +: MANTISSA_ONE_POS_SIZE]))
         begin
             normalizedMantissaCalc = three_sumMantissa;
         end
@@ -220,7 +222,7 @@ module FloatAdd
             normalizedMantissaCalc = three_sumMantissa;
         end
         // We found a denormalized mantissa (a mantissa, which is too small). We have to shift it to the left now till it is normalized
-        else if (three_exponentCorrection < (MANTISSA_SIZE[0 +: EXPONENT_SIZE] + 1))
+        else if (three_exponentCorrection < (MANTISSA_SIZE[0 +: MANTISSA_ONE_POS_SIZE] + 1))
         begin
             normalizedMantissaCalc = three_sumMantissa << (MANTISSA_SIZE[0 +: MANTISSA_WIDTH_LOG2] - three_exponentCorrection[0 +: MANTISSA_WIDTH_LOG2]);
         end

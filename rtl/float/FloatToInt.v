@@ -17,7 +17,7 @@
 
 // Float to signed integer conversion
 // This module is pipelined. It can calculate one conversion per clock
-// This module has a latency of 4 clock cycles
+// This module has a latency of 2 clock cycles minimum
 module FloatToInt 
 # (
     parameter MANTISSA_SIZE = 23,
@@ -33,12 +33,15 @@ module FloatToInt
     // a EXPONENT_BIAS_OFFSET of -2 is equal to a multiplication with 4.0, ...
     parameter EXPONENT_BIAS_OFFSET = 0,
 
+    // Use this delay to add clock cycles. It adds by default 2 clock cycles, so that the conversion requieres 4 clocks.
+    parameter DELAY = 2,
+
     localparam FLOAT_SIZE = 1 + EXPONENT_SIZE + MANTISSA_SIZE
 )
 (
     input  wire                         clk,
     input  wire [FLOAT_SIZE - 1 : 0]    in,
-    output reg  [INT_SIZE - 1 : 0]      out
+    output wire [INT_SIZE - 1 : 0]      out
 );
     localparam UNSIGNED_INT_SIZE = INT_SIZE - 1;
     localparam INT_SIGN_POS = INT_SIZE - 1;
@@ -49,107 +52,99 @@ module FloatToInt
     localparam EXPONENT_SIGNED_SIZE = EXPONENT_SIZE + 1;
     localparam EXPONENT_BIAS = ((2 ** (EXPONENT_SIZE - 1)) - 1) + EXPONENT_BIAS_OFFSET;
 
-    reg  [INT_SIZE - 1 : 0]             one_number;
-    reg                                 one_sign;
-    reg                                 one_overflow;
-    reg                                 one_underflow;
-    reg                                 one_shiftLeft;    
-    reg  [USNIGNED_INT_SIZE_LOG2 - 1 : 0] one_shiftSize;
+
+    reg  [INT_SIZE - 1 : 0] one_number;
+    reg                     one_sign;
+    reg                     one_overflow;
+    reg                     one_underflow;
+    reg                     one_round;
     always @(posedge clk)
     begin : Unpack
-        reg signed [EXPONENT_SIGNED_SIZE - 1 : 0] exponent;
-        reg signed [EXPONENT_SIGNED_SIZE - 1 : 0] shiftSize;
+        reg signed [EXPONENT_SIGNED_SIZE - 1 : 0]   exponent;
+        reg signed [EXPONENT_SIGNED_SIZE - 1 : 0]   signedShiftSize;
+        reg        [INT_SIZE - 1 : 0]               number;
+        reg                                         shiftLeft;    
+        reg        [USNIGNED_INT_SIZE_LOG2 - 1 : 0] shiftSize;
 
-        one_sign <= in[SIGN_POS +: 1];
+        one_sign = in[SIGN_POS +: 1];
         exponent = in[EXPONENT_POS +: EXPONENT_SIZE] - EXPONENT_BIAS[0 +: EXPONENT_SIZE];
 
         // A float in the range of an integer will always have set the hidden bit to one since we can't display fractions with an integer
-        one_number <= {{(INT_SIZE - MANTISSA_SIZE - 1){1'b0}}, 1'b1, in[MANTISSA_POS +: MANTISSA_SIZE]};
+        number = {{(INT_SIZE - MANTISSA_SIZE - 1){1'b0}}, 1'b1, in[MANTISSA_POS +: MANTISSA_SIZE]};
 
-        one_shiftLeft = exponent > $signed(MANTISSA_SIZE[0 +: EXPONENT_SIGNED_SIZE]);
-        if (one_shiftLeft)
+        shiftLeft = exponent > $signed(MANTISSA_SIZE[0 +: EXPONENT_SIGNED_SIZE]);
+        if (shiftLeft)
         begin
-            shiftSize = exponent - MANTISSA_SIZE[0 +: EXPONENT_SIGNED_SIZE];
+            signedShiftSize = exponent - MANTISSA_SIZE[0 +: EXPONENT_SIGNED_SIZE];
         end
         else
         begin
-            shiftSize = MANTISSA_SIZE[0 +: EXPONENT_SIGNED_SIZE] - exponent;
+            signedShiftSize = MANTISSA_SIZE[0 +: EXPONENT_SIGNED_SIZE] - exponent;
         end
-        one_shiftSize <= shiftSize[0 +: USNIGNED_INT_SIZE_LOG2];
+        shiftSize = signedShiftSize[0 +: USNIGNED_INT_SIZE_LOG2];
 
-        one_overflow <= exponent >= (INT_SIZE - 1); // Substracting sign bit
-        one_underflow <= exponent < 0;
-    end
+        one_overflow = exponent >= (INT_SIZE - 1); // Substracting sign bit
+        one_underflow = exponent < 0;
 
-    reg  [INT_SIZE - 1 : 0]     two_number;
-    reg                         two_sign;
-    reg                         two_overflow;
-    reg                         two_underflow;
-    reg                         two_round;
-    always @(posedge clk)
-    begin
-        if (one_shiftLeft)
+        if (shiftLeft)
         begin
-            two_round <= 0;
-            two_number <= one_number << one_shiftSize;
+            one_round <= 0;
+            one_number <= number << shiftSize;
         end
         else 
         begin
-            two_round <= one_number[one_shiftSize - 1];
-            two_number <= one_number >> one_shiftSize;
+            one_round <= number[shiftSize - 1];
+            one_number <= number >> shiftSize;
         end
-        two_sign <= one_sign;
-        two_overflow <= one_overflow;
-        two_underflow <= one_underflow;
     end
 
-    reg                     three_underflow;
-    reg                     three_overflow;
-    reg                     three_sign;
-    reg  [INT_SIZE - 1 : 0] three_number;
+    reg [FLOAT_SIZE - 1 : 0] two_out;
     always @(posedge clk)
-    begin
+    begin : Pack
+        reg                     underflow;
+        reg                     overflow;
+        reg                     sign;
+        reg  [INT_SIZE - 1 : 0] number;
         // Reevaluate underflow
-        if (two_underflow)
+        if (one_underflow)
         begin
             // If we where able to round, then the last value was bigger than 0.5. Therefor we can round now.
-            if (two_round)
+            if (one_round)
             begin
-                three_underflow <= 0;
-                three_number <= 1; 
+                underflow = 0;
+                number = 1; 
             end
             else
             begin
-                three_underflow <= 1;
-                three_number <= 0; 
+                underflow = 1;
+                number = 0; 
             end
         end
         else 
         begin
-            three_underflow <= two_underflow;
-            three_number <= two_number + {{(INT_SIZE - 1){1'b0}}, two_round};
+            underflow = one_underflow;
+            number = one_number + {{(INT_SIZE - 1){1'b0}}, one_round};
         end
-        three_overflow <= two_overflow;
-        three_sign <= two_sign;
-    end
+        overflow = one_overflow;
+        sign = one_sign;
 
-    always @(posedge clk) 
-    begin
-        if (three_overflow)
+        if (overflow)
         begin
-            out <= 0;
+            two_out <= 0;
         end
         else
         begin
-            if (three_sign)
+            if (sign)
             begin
-                out <= ~three_number + 1;
+                two_out <= ~number + 1;
             end
             else
             begin
-                out <= three_number;
+                two_out <= number;
             end
         end
     end
 
+    ValueDelay #(.VALUE_SIZE(FLOAT_SIZE), .DELAY(DELAY)) 
+        currentIterationDelayer (.clk(clk), .in(two_out), .out(out));
 endmodule
