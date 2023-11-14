@@ -66,7 +66,7 @@ module FloatToInt
         reg                                         shiftLeft;    
         reg        [USNIGNED_INT_SIZE_LOG2 - 1 : 0] shiftSize;
 
-        one_sign = in[SIGN_POS +: 1];
+        one_sign <= in[SIGN_POS +: 1];
         exponent = in[EXPONENT_POS +: EXPONENT_SIZE] - EXPONENT_BIAS[0 +: EXPONENT_SIZE];
 
         // A float in the range of an integer will always have set the hidden bit to one since we can't display fractions with an integer
@@ -83,8 +83,8 @@ module FloatToInt
         end
         shiftSize = signedShiftSize[0 +: USNIGNED_INT_SIZE_LOG2];
 
-        one_overflow = exponent >= (INT_SIZE - 1); // Substracting sign bit
-        one_underflow = exponent < 0;
+        one_overflow <= exponent >= (INT_SIZE - 1); // Substracting sign bit
+        one_underflow <= exponent < 0;
 
         if (shiftLeft)
         begin
