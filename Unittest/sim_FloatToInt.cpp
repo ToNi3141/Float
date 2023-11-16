@@ -38,6 +38,7 @@ void testConversion(VFloatToInt* top, int32_t result, uint32_t in)
     top->in = in;
     // The pipeline has a latency of 4 clocks until the result is computed.
     clk(top);
+    top->in = 0;
     clk(top);
     clk(top);
     clk(top);
