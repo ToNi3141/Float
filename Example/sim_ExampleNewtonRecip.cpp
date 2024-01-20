@@ -23,9 +23,9 @@
 #include <verilated.h>
 
 // Include model header, generated from Verilating "top.v"
-#include "VFloatFastRecip2.h"
+#include "VExampleNewtonRecip.h"
 
-void clk(VFloatFastRecip2* t)
+void clk(VExampleNewtonRecip* t)
 {
     t->clk = 0;
     t->eval();
@@ -57,9 +57,9 @@ float inv_fast(float x) {
     return v.f * sx;
 }
 
-TEST_CASE("Specific numbers", "[FloatFastRecip2]")
+TEST_CASE("Specific numbers", "[ExampleNewtonRecip]")
 {
-    VFloatFastRecip2* top = new VFloatFastRecip2;
+    VExampleNewtonRecip* top = new VExampleNewtonRecip;
 
     for (int i = -1000000; i < 1000000; i++)
     {

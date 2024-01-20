@@ -1,6 +1,6 @@
 PROJ = float
 
-all: sub mul itf fti inv
+all: sub mul itf fti inv recip
 
 clean:
 	rm -R obj_dir
@@ -30,10 +30,10 @@ inv:
 	make -C obj_dir -f VFloatFastRecip.mk
 	./obj_dir/VFloatFastRecip
 
-inv2:
-	verilator -CFLAGS -std=c++11 --cc -exe ../rtl/float/FloatFastRecip2.v --top-module FloatFastRecip2 sim_FloatFastRecip2.cpp -I../rtl/float/
-	make -C obj_dir -f VFloatFastRecip2.mk
-	./obj_dir/VFloatFastRecip2
+recip:
+	verilator -CFLAGS -std=c++11 --cc -exe ../rtl/float/FloatRecip.v --top-module FloatRecip sim_FloatRecip.cpp -I../rtl/float/
+	make -C obj_dir -f VFloatRecip.mk
+	./obj_dir/VFloatRecip
 
 sim: my_design
 	vvp my_design
