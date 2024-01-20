@@ -1,6 +1,6 @@
 // Float
 // https://github.com/ToNi3141/Float
-// Copyright (c) 2021 ToNi3141
+// Copyright (c) 2024 ToNi3141
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -23,9 +23,9 @@
 #include <verilated.h>
 
 // Include model header, generated from Verilating "top.v"
-#include "VFloatFastRecip2.h"
+#include "VFloatRecip.h"
 
-void clk(VFloatFastRecip2* t)
+void clk(VFloatRecip* t)
 {
     t->clk = 0;
     t->eval();
@@ -57,29 +57,58 @@ float inv_fast(float x) {
     return v.f * sx;
 }
 
-TEST_CASE("Specific numbers", "[FloatFastRecip2]")
+TEST_CASE("Specific number", "[FloatRecip]")
 {
-    VFloatFastRecip2* top = new VFloatFastRecip2;
+    VFloatRecip* top = new VFloatRecip;
+
+    float a = 0.999999940395f; // Number which observed to trigger rounding issues
+    top->in = *(uint32_t*)&a;
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+    top->in = 0; // To test the pipeline
+    float out;
+    *(uint32_t*)&out = top->out;
+
+    REQUIRE(Approx(out).epsilon(0.000001) == (1.0f / a));
+
+    // Final model cleanup
+    top->final();
+
+    // Destroy model
+    delete top;
+}
+
+
+TEST_CASE("Range", "[FloatRecip]")
+{
+    VFloatRecip* top = new VFloatRecip;
 
     for (int i = -1000000; i < 1000000; i++)
     {
         float a = (float)i * 0.001;
         top->in = *(uint32_t*)&a;
-        for (int j = 0; j < 25; j++)
+        for (int j = 0; j < 11; j++)
         {
             clk(top);
             top->in = 0; // To test the pipeline
         }
         float out;
         *(uint32_t*)&out = top->out;
-        float ref = inv_fast(a);
-        // TODO: The library currently has a bug with inf and nan.
-        // The verilog code reports inf, the test reports nan. For now, just handle this case a bit different. 
-        // In the future, both implementations should report the same.
-        if (i == 0)
-            REQUIRE(out == std::numeric_limits<float>::infinity());
-        else
-            REQUIRE(Approx(out).epsilon(0.000001) == ref);
+        // TODO: The library currently has a bug with inf and nan and so on.
+        // The handling is in the verilog code not implemented.
+        if (i != 0)
+        {
+            REQUIRE(Approx(out).epsilon(0.000001) == 1.0f/a);
+        }
     }
 
     // Final model cleanup

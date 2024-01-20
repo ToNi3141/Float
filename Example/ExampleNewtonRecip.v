@@ -23,7 +23,7 @@
 // of iterations can be adapted to get the best tradeoff between logic utilization and accuracy.
 // This module has by default a latency of 25 + 1 clock cycles (3 iterations)
 // Minimum is one iteration (8 + 1 clock cycles of delay)
-module FloatFastRecip2
+module ExampleNewtonRecip
 # (
     parameter MANTISSA_SIZE = 23,
     parameter ITERATIONS = 3, // Reduce the iterations to lower the latency. Each iteration requires 8 clock cycles
