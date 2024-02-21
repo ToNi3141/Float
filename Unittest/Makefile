@@ -35,6 +35,11 @@ recip:
 	make -C obj_dir -f VFloatRecip.mk
 	./obj_dir/VFloatRecip
 
+xrecip:
+	verilator -CFLAGS -std=c++11 --cc -exe ../rtl/float/XRecip.v --top-module XRecip sim_XRecip.cpp -I../rtl/float/
+	make -C obj_dir -f VXRecip.mk
+	./obj_dir/VXRecip
+
 sim: my_design
 	vvp my_design
 
