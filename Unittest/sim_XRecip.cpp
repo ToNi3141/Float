@@ -45,7 +45,7 @@ TEST_CASE("Specific number", "[XRecip]")
         clk(top);
     }
 
-    REQUIRE(top->out == 2);
+    REQUIRE(top->out >> 24 == 2ULL);
 
     // Final model cleanup
     top->final();

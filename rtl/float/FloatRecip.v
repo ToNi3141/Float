@@ -62,15 +62,17 @@ module FloatRecip
     ValueDelay #(.VALUE_SIZE(1), .DELAY(10)) 
         step1sign (.clk(clk), .in(step0_sign), .out(step1_sign));
 
-    wire signed [SIGNED_MANZISSA_SIZE - 1 : 0]  mt = { 1'b0, 1'b1, step0_mantissa[0 +: MANTISSA_SIZE] };
+    wire signed [SIGNED_MANZISSA_SIZE - 1 : 0]                              mt = { 1'b0, 1'b1, step0_mantissa[0 +: MANTISSA_SIZE] };
+    wire        [(SIGNED_MANZISSA_SIZE - 1) + SIGNED_MANZISSA_SIZE - 1 : 0] step1_mantissa_big;
     ComputeRecip #(
         .MS(SIGNED_MANZISSA_SIZE),
         .ITR(2)
     ) recip (
         .clk(clk),
         .d(mt),
-        .v(step1_mantissa)
+        .v(step1_mantissa_big)
     );
+    assign step1_mantissa = step1_mantissa_big[SIGNED_MANZISSA_SIZE - 1 +: SIGNED_MANZISSA_SIZE];
 
     ////////////////////////////////////////////////////////////////////////////
     // STEP 2 

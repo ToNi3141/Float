@@ -16,26 +16,24 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Integer reciprocal
-// It does not really belong into here, but the float and integer versions are really equal
-// and using the same base.
-// This is based on the paper: An Efficient Hardware Implementation for a Reciprocal Unit
-// See: https://www.researchgate.net/publication/220804890_An_Efficient_Hardware_Implementation_for_a_Reciprocal_Unit
-// The calculation of the initial value is basically the same, but the multiplexers are 
-// all removed. They are not needed in a pipelined version, because all hardware is by
-// the nature of a pipeline always utilized and must exist several times.
-// Note: It currently does not handle special cases like inf, NaN or division through zero.
+// It automatically normalizes a number to calculate the reciprocal of that.
+// If the input number is a integer number in the format Q10.0, then the output
+// will be a number in the format Q0.10. A Q0.10 as input is outputted as Q10.10.
 // This module is pipelined. It can calculate one reciprocal per clock.
-// It requires 13 clocks to calculate the inverse of a number.
+// It requires 7 + (ITERATIONS * 3) clocks to calculate the inverse of a number.
+// Every iteration doubles the precision, starting with 6 bit initial estimation.
+// Means two iterations resulting in 24bit precision.
 module XRecip
 # (
     parameter NUMBER_WIDTH = 24,
+    parameter ITERATIONS = 2,
     localparam SIGNED_NUMBER_WIDTH = NUMBER_WIDTH + 1,
     localparam EXPONENT_SIZE = $clog2(NUMBER_WIDTH) + 1
 )
 (
-    input  wire                         clk,
-    input  wire [NUMBER_WIDTH - 1 : 0]  in,
-    output reg  [NUMBER_WIDTH - 1 : 0]  out
+    input  wire                                         clk,
+    input  wire [NUMBER_WIDTH - 1 : 0]                  in,
+    output reg  [NUMBER_WIDTH + NUMBER_WIDTH - 1 : 0]   out
 );
     ////////////////////////////////////////////////////////////////////////////
     // STEP 0
@@ -76,14 +74,14 @@ module XRecip
     ////////////////////////////////////////////////////////////////////////////
     // STEP 2
     // Compute 
-    // Clocks: 1
+    // Clocks: 4 + (ITERATIONS * 3)
     ////////////////////////////////////////////////////////////////////////////
-    wire [SIGNED_NUMBER_WIDTH - 1 : 0]  step2_number;
+    wire [(SIGNED_NUMBER_WIDTH * 2) - 2 : 0]  step2_number;
     wire [EXPONENT_SIZE - 1 : 0]        step2_exponent;
 
     ComputeRecip #(
         .MS(SIGNED_NUMBER_WIDTH),
-        .ITR(2)
+        .ITR(ITERATIONS)
     ) step2recip (
         .clk(clk),
         .d(step1_number),
@@ -102,7 +100,7 @@ module XRecip
 
     always @(posedge clk)
     begin
-        out <= step2_number[0 +: NUMBER_WIDTH] >> step2_exponent;
+        out <= step2_number[0 +: NUMBER_WIDTH + NUMBER_WIDTH] >> step2_exponent;
     end
 
 endmodule

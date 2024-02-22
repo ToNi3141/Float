@@ -16,20 +16,24 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Module to calculate the reciprocal of a normalized number (1.0 ... 1.9999..). Other numbers are not supported.
+// Hint: As soon as a number is normalized (number is shifted to the right until the MSb is 1), it can be interpretet as 1.x,
+// Doesn't matter if it is an integer or only the fraction of a number.
 // This is based on the paper: An Efficient Hardware Implementation for a Reciprocal Unit
 // See: https://www.researchgate.net/publication/220804890_An_Efficient_Hardware_Implementation_for_a_Reciprocal_Unit
 // The calculation of the initial value is basically the same, but the multiplexers are 
 // all removed. They are not needed in a pipelined version, because all hardware is by
 // the nature of a pipeline always utilized and must exist several times.
 // It requires 4 + (ITR * 3) clock cycles
+// Every iteration doubles the precision, starting with 6 bit initial estimation.
+// Means two iterations resulting in 24bit precision.
 module ComputeRecip #(
     parameter MS = 25,
     parameter ITR = 2
 )
 (
-    input  wire                     clk,
-    input  wire signed [MS - 1 : 0] d,
-    output wire signed [MS - 1 : 0] v
+    input  wire                                 clk,
+    input  wire signed [MS - 1 : 0]             d, // S1.23
+    output wire signed [(MS - 1) + MS - 1 : 0]  v // S1.46
 );
 
     ////////////////////////////////////////////////////////////////////////////
@@ -64,10 +68,10 @@ module ComputeRecip #(
     // It double the precision by each iteration.
     // Clocks: 3 * ITR
     ////////////////////////////////////////////////////////////////////////////
-    wire signed [MS - 1 : 0]  step1_mantissa[ITR : 0];
-    wire signed [MS - 1 : 0]  step1_mantissaDenumerator[ITR : 0];
+    wire signed [((MS - 1) + MS) - 1 : 0]   step1_mantissa[ITR : 0];
+    wire signed [MS - 1 : 0]                step1_mantissaDenumerator[ITR : 0];
 
-    assign step1_mantissa[0] = step0_mantissa;
+    assign step1_mantissa[0] = { step0_mantissa, { (MS - 1) { 1'b0 } } };
     assign step1_mantissaDenumerator[0] = step0_mantissaDenumerator;
 
     generate
@@ -78,7 +82,7 @@ module ComputeRecip #(
                 .MS(MS)
             ) newtonIteration (
                 .clk(clk),
-                .x0(step1_mantissa[i]),
+                .x0(step1_mantissa[i][MS - 1 +: MS]),
                 .Dn(step1_mantissaDenumerator[i]),
                 .x1(step1_mantissa[i + 1])
             );
@@ -99,10 +103,10 @@ module NewtonRaphsonIteration #(
     parameter MS = 25 // S1.23
 )
 (
-    input  wire                     clk,
-    input  wire signed [MS - 1 : 0] x0, // S1.23
-    input  wire signed [MS - 1 : 0] Dn, // S1.23
-    output reg  signed [MS - 1 : 0] x1 // S1.23
+    input  wire                                 clk,
+    input  wire signed [MS - 1 : 0]             x0, // S1.23
+    input  wire signed [MS - 1 : 0]             Dn, // S1.23
+    output reg  signed [(MS - 1) + MS - 1 : 0]  x1 // S1.23
 );
     localparam [(MS + 2) - 1 : 0] TWO = { 3'b0_10, { ((MS + 2) - 3) { 1'b0 } } }; // signed 2.0 as S2.24
 
@@ -138,7 +142,7 @@ module NewtonRaphsonIteration #(
     always @(posedge clk)
     begin : step2
         step2_x1 = step1_x0 * step1_x1[0 +: MS]; // Convert x1 from S2.x to Q2.x
-        x1 <= { 1'b0, step2_x1[(MS - 1) +: MS - 1] }; // Convert Q3.x to S1.x
+        x1 <= { 1'b0, step2_x1[0 +: (MS - 1) + MS - 1] }; // Convert Q3.x to S1.x
     end
 endmodule
 
