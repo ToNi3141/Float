@@ -37,10 +37,10 @@ TEST_CASE("Specific number", "[XRecip]")
 {
     VXRecip* top = new VXRecip;
 
-    top->in = 0x7fffff; // 0.00123
+    top->in = 0x7fffff; // 0.5
     clk(top);
-    // top->in = 0; // To test the pipeline
-    for (uint32_t i = 0; i < 22; i++)
+    top->in = 0; // To test the pipeline
+    for (uint32_t i = 0; i < 12; i++)
     {
         clk(top);
     }
@@ -55,32 +55,29 @@ TEST_CASE("Specific number", "[XRecip]")
 }
 
 
-// TEST_CASE("Range", "[XRecip]")
-// {
-//     VXRecip* top = new VXRecip;
+TEST_CASE("Range", "[XRecip]")
+{
+    VXRecip* top = new VXRecip;
 
-//     for (int i = -1000000; i < 1000000; i++)
-//     {
-//         float a = (float)i * 0.001;
-//         top->in = *(uint32_t*)&a;
-//         for (int j = 0; j < 11; j++)
-//         {
-//             clk(top);
-//             top->in = 0; // To test the pipeline
-//         }
-//         float out;
-//         *(uint32_t*)&out = top->out;
-//         // TODO: The library currently has a bug with inf and nan and so on.
-//         // The handling is in the verilog code not implemented.
-//         if (i != 0)
-//         {
-//             REQUIRE(Approx(out).epsilon(0.000001) == 1.0f/a);
-//         }
-//     }
+    for (uint32_t i = 0; i < (1 << 20); i++)
+    {
+        top->in = i;
+        for (int j = 0; j < 13; j++)
+        {
+            clk(top);
+            top->in = 0; // To test the pipeline
+        }
+        const float out = static_cast<float>(top->out) / (1ull << 48);
 
-//     // Final model cleanup
-//     top->final();
+        if (i != 0) // Avoid division through zero
+        {
+            REQUIRE(Approx(1.0f/i).epsilon(0.000001) == out);
+        }
+    }
 
-//     // Destroy model
-//     delete top;
-// }
+    // Final model cleanup
+    top->final();
+
+    // Destroy model
+    delete top;
+}

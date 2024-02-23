@@ -1,6 +1,6 @@
 PROJ = float
 
-all: sub mul itf fti inv recip
+all: sub mul itf fti inv recip xrecip
 
 clean:
 	rm -R obj_dir
