@@ -5,6 +5,7 @@ Goal was to use as less clock cycles as possible, have pipelining (one calculati
 
 ## Facts
 - Implemented operations: ```*```, ```+```, ```-```, ```1/x```, ```int to float```, ```float to int```
+- Also implements a fixed point recip `XRecip`. Does not really belong to here, but it was convenient to implement it here, because all required code was already here.
 - __One operation per clock__ (all operations are __pipelined__)
 - Latency: __4 Clock cycles__ (except FloatRecip which requires 11)
 - FloatFastRecip to get a fast approximation for ```1/x``` (error is around 5%). It is a very small and fast implementation
