@@ -76,8 +76,8 @@ module XRecip
     // Compute 
     // Clocks: 4 + (ITERATIONS * 3)
     ////////////////////////////////////////////////////////////////////////////
-    wire [(SIGNED_NUMBER_WIDTH * 2) - 2 : 0]  step2_number;
-    wire [EXPONENT_SIZE - 1 : 0]        step2_exponent;
+    wire [(SIGNED_NUMBER_WIDTH * 2) - 2 : 0]    step2_number;
+    wire [EXPONENT_SIZE - 1 : 0]                step2_exponent;
 
     ComputeRecip #(
         .MS(SIGNED_NUMBER_WIDTH),

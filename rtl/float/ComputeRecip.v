@@ -60,7 +60,7 @@ module ComputeRecip #(
     );
 
     ValueDelay #(.VALUE_SIZE(MS), .DELAY(4)) 
-        step0mantissaNegative (.clk(clk), .in(~d + 1), .out(step0_mantissaDenumerator));
+        step0mantissaNegative (.clk(clk), .in(~d + { { ( MS - 1) { 1'b0 } }, 1'b1 }), .out(step0_mantissaDenumerator));
 
     ////////////////////////////////////////////////////////////////////////////
     // STEP 1 
@@ -128,12 +128,14 @@ module NewtonRaphsonIteration #(
     // x1 = x1 + 2.0
     // Clocks: 1
     ////////////////////////////////////////////////////////////////////////////
-    reg signed [MS - 1 : 0]         step1_x0; // S1.23
-    reg signed [(MS + 2) - 1 : 0]   step1_x1; // S2.x
+    reg signed [MS - 1 : 0]     step1_x0; // S1.23
+    reg        [MS - 1 : 0]     step1_x1; // Q2.x
     always @(posedge clk)
-    begin
+    begin : step1
+        reg signed [(MS + 3) - 1 : 0] x1;
+        x1 = $signed(step0_x1[(MS - 2) +: (MS + 2)]) + $signed(TWO);
         step1_x0 <= step0_x0;
-        step1_x1 <= $signed(step0_x1[(MS - 2) +: (MS + 2)]) + $signed(TWO);
+        step1_x1 <= x1[0 +: MS];
     end
 
     ////////////////////////////////////////////////////////////////////////////
@@ -144,7 +146,7 @@ module NewtonRaphsonIteration #(
     reg [MS + MS - 1 : 0] step2_x1; // Q3.x
     always @(posedge clk)
     begin : step2
-        step2_x1 = step1_x0 * step1_x1[0 +: MS]; // Convert x1 from S2.x to Q2.x
+        step2_x1 = step1_x0 * step1_x1;
         x1 <= { 1'b0, step2_x1[0 +: (MS - 1) + MS - 1] }; // Convert Q3.x to S1.x
     end
 endmodule

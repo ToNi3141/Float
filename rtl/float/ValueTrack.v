@@ -20,8 +20,7 @@
 // This can be useful when it is required to check, if the pipeline is
 // empty or not.
 // This module is pipelined
-module ValueTrack #(
-)
+module ValueTrack
 (
     input  wire aclk,
     input  wire resetn,
