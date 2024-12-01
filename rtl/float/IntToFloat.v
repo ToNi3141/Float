@@ -23,13 +23,6 @@ module IntToFloat
     parameter MANTISSA_SIZE = 23,
     parameter EXPONENT_SIZE = 8,
 
-    // This value can be used to shift the bias of the exponent in the float. 
-    // This conversion can be useful when converting to a fix point to float format without any extra cost.
-    // For instance a EXPONENT_BIAS_OFFSET of -1 is equal to a multiplication with 2.0,
-    // a EXPONENT_BIAS_OFFSET of -2 is equal to a multiplication with 4.0, ...
-    // A Fixpoint number in format Q7.8 can be directly converted with a EXPONENT_BIAS_OFFSET of -8.
-    parameter EXPONENT_BIAS_OFFSET = 0,
-
     // Has to be at least the size of the mantissa plus the hidden bit and plus sign. 
     // In other words: MANTISSA_SIZE + 2.
     parameter INT_SIZE = 32, 
@@ -37,14 +30,21 @@ module IntToFloat
     localparam FLOAT_SIZE = 1 + EXPONENT_SIZE + MANTISSA_SIZE
 )
 (
-    input  wire                         clk,
-    input  wire [INT_SIZE - 1 : 0]      in,
-    output reg  [FLOAT_SIZE - 1 : 0]    out
+    input  wire                                 clk,
+
+    // This value can be used to shift the bias of the exponent in the float. 
+    // This conversion can be useful when converting to a fix point to float format without any extra cost.
+    // For instance a offset of -1 is equal to a multiplication with 2.0,
+    // a offset of -2 is equal to a multiplication with 4.0, ...
+    // A Fixpoint number in format Q7.8 can be directly converted with a offset of -8.
+    input  wire signed [EXPONENT_SIZE - 1 : 0]  offset,
+    input  wire        [INT_SIZE - 1 : 0]       in,
+    output reg         [FLOAT_SIZE - 1 : 0]     out
 );
     localparam SIGN_POS = MANTISSA_SIZE + EXPONENT_SIZE;
     localparam UNSIGNED_INT_SIZE = INT_SIZE - 1;
     localparam INT_SIGN_POS = INT_SIZE - 1;
-    localparam [EXPONENT_SIZE - 1 : 0] EXPONENT_BIAS = ((2 ** (EXPONENT_SIZE - 1)) - 1) + EXPONENT_BIAS_OFFSET;
+    localparam [EXPONENT_SIZE - 1 : 0] EXPONENT_BIAS = ((2 ** (EXPONENT_SIZE - 1)) - 1);
     localparam USNIGNED_INT_SIZE_LOG2 = $clog2(UNSIGNED_INT_SIZE);
 
     wire [USNIGNED_INT_SIZE_LOG2 - 1 : 0] exponent;
@@ -90,7 +90,7 @@ module IntToFloat
 
         three_mantissaOverflow = two_number[two_exponent - MANTISSA_SIZE[0 +: USNIGNED_INT_SIZE_LOG2] - 1];
         three_shiftLeft = two_exponent < MANTISSA_SIZE[0 +: USNIGNED_INT_SIZE_LOG2];
-        exp = {{(EXPONENT_SIZE - USNIGNED_INT_SIZE_LOG2){1'h0}}, two_exponent} + EXPONENT_BIAS;
+        exp = {{(EXPONENT_SIZE - USNIGNED_INT_SIZE_LOG2){1'h0}}, two_exponent} + (EXPONENT_BIAS + offset);
         if (two_number == 0)
         begin
             three_number <= 0;

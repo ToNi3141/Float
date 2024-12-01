@@ -33,9 +33,10 @@ void clk(VIntToFloat* t)
     t->eval();
 }
 
-void testConversion(VIntToFloat* top, int32_t in, uint32_t result)
+void testConversion(VIntToFloat* top, int32_t in, uint32_t result, int8_t offset = 0)
 {
     top->in = in;
+    top->offset = offset;
     // The pipeline has a latency of 4 clocks until the result is computed.
     clk(top);
     clk(top);
@@ -76,6 +77,29 @@ TEST_CASE("Specific numbers", "[IntToFloat]")
 
     testConversion(top, INT32_MAX, 0x4f000000);
     testConversion(top, INT32_MIN + 1, 0xcf000000); // Reduce the min value by one, because internally we calculate with unsigned 32 bit values. INT32_MIN will overflow INT32_MAX.
+
+    // Final model cleanup
+    top->final();
+
+    // Destroy model
+    delete top;
+}
+
+TEST_CASE("Exponent Offset", "[IntToFloat]")
+{
+    VIntToFloat* top = new VIntToFloat;
+
+    testConversion(top, 8, 0x40800000, -1);
+    testConversion(top, -8, 0xc0800000, -1);
+
+    testConversion(top, 2, 0x40800000, 1);
+    testConversion(top, -2, 0xc0800000, 1);
+
+    testConversion(top, 4096, 0x43800000, -4);
+    testConversion(top, -4096, 0xc3800000, -4);
+    
+    testConversion(top, 16, 0x43800000, 4);
+    testConversion(top, -16, 0xc3800000, 4);
 
     // Final model cleanup
     top->final();

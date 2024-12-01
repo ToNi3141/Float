@@ -27,21 +27,20 @@ module FloatToInt
     // In other words: MANTISSA_SIZE + 2.
     parameter INT_SIZE = 32, 
 
-    // This value can be used to shift the bias of the exponent in the float. 
-    // This conversion can be useful when converting to a fix point format without any extra cost.
-    // For instance a EXPONENT_BIAS_OFFSET of -1 is equal to a multiplication with 2.0,
-    // a EXPONENT_BIAS_OFFSET of -2 is equal to a multiplication with 4.0, ...
-    parameter EXPONENT_BIAS_OFFSET = 0,
-
     // Use this delay to add clock cycles. It adds by default 2 clock cycles, so that the conversion requieres 4 clocks.
     parameter DELAY = 2,
 
     localparam FLOAT_SIZE = 1 + EXPONENT_SIZE + MANTISSA_SIZE
 )
 (
-    input  wire                         clk,
-    input  wire [FLOAT_SIZE - 1 : 0]    in,
-    output wire [INT_SIZE - 1 : 0]      out
+    input  wire                                 clk,
+    // This value can be used to shift the bias of the exponent in the float. 
+    // This conversion can be useful when converting to a fix point format without any extra cost.
+    // For instance a offset of -1 is equal to a multiplication with 2.0,
+    // a offset of -2 is equal to a multiplication with 4.0, ...
+    input  wire signed  [EXPONENT_SIZE - 1 : 0] offset,
+    input  wire         [FLOAT_SIZE - 1 : 0]    in,
+    output wire         [INT_SIZE - 1 : 0]      out
 );
     localparam UNSIGNED_INT_SIZE = INT_SIZE - 1;
     localparam INT_SIGN_POS = INT_SIZE - 1;
@@ -50,7 +49,7 @@ module FloatToInt
     localparam EXPONENT_POS = MANTISSA_SIZE;
     localparam SIGN_POS = EXPONENT_POS + EXPONENT_SIZE;
     localparam EXPONENT_SIGNED_SIZE = EXPONENT_SIZE + 1;
-    localparam EXPONENT_BIAS = ((2 ** (EXPONENT_SIZE - 1)) - 1) + EXPONENT_BIAS_OFFSET;
+    localparam EXPONENT_BIAS = (2 ** (EXPONENT_SIZE - 1)) - 1;
 
 
     reg  [INT_SIZE - 1 : 0] one_number;
@@ -67,7 +66,7 @@ module FloatToInt
         reg        [USNIGNED_INT_SIZE_LOG2 - 1 : 0] shiftSize;
 
         one_sign <= in[SIGN_POS +: 1];
-        exponent = in[EXPONENT_POS +: EXPONENT_SIZE] - EXPONENT_BIAS[0 +: EXPONENT_SIZE];
+        exponent = in[EXPONENT_POS +: EXPONENT_SIZE] - $unsigned($signed(EXPONENT_BIAS[0 +: EXPONENT_SIZE]) + offset);
 
         // A float in the range of an integer will always have set the hidden bit to one since we can't display fractions with an integer
         number = {{(INT_SIZE - MANTISSA_SIZE - 1){1'b0}}, 1'b1, in[MANTISSA_POS +: MANTISSA_SIZE]};

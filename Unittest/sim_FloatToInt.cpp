@@ -33,9 +33,10 @@ void clk(VFloatToInt* t)
     t->eval();
 }
 
-void testConversion(VFloatToInt* top, int32_t result, uint32_t in)
+void testConversion(VFloatToInt* top, int32_t result, uint32_t in, int8_t offset = 0)
 {
     top->in = in;
+    top->offset = offset;
     // The pipeline has a latency of 4 clocks until the result is computed.
     clk(top);
     top->in = 0;
@@ -94,6 +95,29 @@ TEST_CASE("Specific numbers", "[FloatToInt]")
     // Underflow (0.499999970198)
     testConversion(top, 0, 0x3effffff);
     testConversion(top, 0, 0xbeffffff); 
+
+    // Final model cleanup
+    top->final();
+
+    // Destroy model
+    delete top;
+}
+
+TEST_CASE("Exponent Offset", "[FloatToInt]")
+{
+    VFloatToInt* top = new VFloatToInt;
+
+    testConversion(top, 8, 0x40800000, -1);
+    testConversion(top, -8, 0xc0800000, -1);
+
+    testConversion(top, 2, 0x40800000, 1);
+    testConversion(top, -2, 0xc0800000, 1);
+
+    testConversion(top, 4096, 0x43800000, -4);
+    testConversion(top, -4096, 0xc3800000, -4);
+    
+    testConversion(top, 16, 0x43800000, 4);
+    testConversion(top, -16, 0xc3800000, 4);
 
     // Final model cleanup
     top->final();
