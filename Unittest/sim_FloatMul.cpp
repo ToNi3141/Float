@@ -55,6 +55,7 @@ TEST_CASE("Range (4 * b[-100'000.00 to 100'000.00])", "[Multiplication]")
 {
     int pipelineCounter = 3;
     VFloatMul* top = new VFloatMul;
+    top->ce = 1;
     for (int i = -10000000; i < 10000000; i++)
     {
         float a = 4;
@@ -78,10 +79,53 @@ TEST_CASE("Range (4 * b[-100'000.00 to 100'000.00])", "[Multiplication]")
     delete top;
 }
 
+TEST_CASE("CE stalls the pipeline", "[Multiplication]")
+{
+    int pipelineCounter = 3;
+    VFloatMul* top = new VFloatMul;
+
+    float a = 4;
+    float result = 16;
+    uint32_t u32Result = *(uint32_t*)&result;
+
+    top->facAIn = *(uint32_t*)&a;
+    top->facBIn = *(uint32_t*)&a;
+    top->ce = 0;
+    clk(top);
+    REQUIRE(top->prod != u32Result);
+
+    top->ce = 1;
+    clk(top);
+    REQUIRE(top->prod != u32Result);
+
+    top->ce = 1;
+    clk(top);
+    REQUIRE(top->prod != u32Result);
+
+    top->ce = 1;
+    clk(top);
+    REQUIRE(top->prod != u32Result);
+
+    top->ce = 0;
+    clk(top);
+    REQUIRE(top->prod != u32Result);
+    
+    top->ce = 1;
+    clk(top);
+    REQUIRE(top->prod == u32Result);
+
+    // Final model cleanup
+    top->final();
+
+    // Destroy model
+    delete top;
+}
+
 TEST_CASE("Range (a[-100'000.00 to 100'000.00] * 4)", "[Multiplication]")
 {
     int pipelineCounter = 3;
     VFloatMul* top = new VFloatMul;
+    top->ce = 1;
     for (int i = -10000000; i < 10000000; i++)
     {
         float a = (float)i * 0.01;
@@ -109,6 +153,7 @@ TEST_CASE("Range (a[-100'000.00 to 100'000.00] * 4)", "[Multiplication]")
 TEST_CASE("Specific numbers", "[Multiplication]")
 {
     VFloatMul* top = new VFloatMul;
+    top->ce = 1;
 
     // Tests with exponent of 0 and small mantissa
     // 0 * 0

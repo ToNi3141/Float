@@ -26,6 +26,7 @@ module ValueDelay #(
 )
 (
     input  wire                         clk,
+    input  wire                         ce,
     input  wire [VALUE_SIZE - 1 : 0]    in,
     output wire [VALUE_SIZE - 1 : 0]    out
 );
@@ -35,7 +36,7 @@ module ValueDelay #(
         begin
             reg  [VALUE_SIZE - 1 : 0] delay[0 : DELAY - 1];
             always @(posedge clk)
-            begin
+            if (ce) begin
                 for (i = 0; i < DELAY - 1; i = i + 1)
                 begin
                     delay[i] <= delay[i + 1];

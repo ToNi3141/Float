@@ -32,6 +32,7 @@ module ComputeRecip #(
 )
 (
     input  wire                                 clk,
+    input  wire                                 ce,
     input  wire signed [MS - 1 : 0]             d, // S1.23
     output wire signed [(MS - 1) + MS - 1 : 0]  v // S1.46
 );
@@ -52,6 +53,7 @@ module ComputeRecip #(
         .MS(MS)
     ) newtonIterationInit (
         .clk(clk),
+        .ce(ce),
         .a(18'b0_010_10100111110011), // 2.65548
         .b(18'b1_010_00010010011111), // -5.92781
         .c(18'b0_100_01001000101011), // 4.28387
@@ -60,7 +62,7 @@ module ComputeRecip #(
     );
 
     ValueDelay #(.VALUE_SIZE(MS), .DELAY(4)) 
-        step0mantissaNegative (.clk(clk), .in(~d + { { ( MS - 1) { 1'b0 } }, 1'b1 }), .out(step0_mantissaDenumerator));
+        step0mantissaNegative (.clk(clk), .ce(ce), .in(~d + { { ( MS - 1) { 1'b0 } }, 1'b1 }), .out(step0_mantissaDenumerator));
 
     ////////////////////////////////////////////////////////////////////////////
     // STEP 1 
@@ -82,13 +84,14 @@ module ComputeRecip #(
                 .MS(MS)
             ) newtonIteration (
                 .clk(clk),
+                .ce(ce),
                 .x0(step1_mantissa[i][MS - 1 +: MS]),
                 .Dn(step1_mantissaDenumerator[i]),
                 .x1(step1_mantissa[i + 1])
             );
 
             ValueDelay #(.VALUE_SIZE(MS), .DELAY(3)) 
-                step1mantissaNegative (.clk(clk), .in(step1_mantissaDenumerator[i]), .out(step1_mantissaDenumerator[i + 1]));
+                step1mantissaNegative (.clk(clk), .ce(ce), .in(step1_mantissaDenumerator[i]), .out(step1_mantissaDenumerator[i + 1]));
 
         end
     endgenerate
@@ -104,6 +107,7 @@ module NewtonRaphsonIteration #(
 )
 (
     input  wire                                 clk,
+    input  wire                                 ce,
     input  wire signed [MS - 1 : 0]             x0, // S1.23
     input  wire signed [MS - 1 : 0]             Dn, // S1.23
     output reg  signed [(MS - 1) + MS - 1 : 0]  x1 // S1.23
@@ -118,7 +122,7 @@ module NewtonRaphsonIteration #(
     reg signed [MS - 1 : 0]         step0_x0; // S1.23
     reg signed [MS + MS - 1 : 0]    step0_x1; // S2.x
     always @(posedge clk)
-    begin
+    if (ce) begin
         step0_x0 <= x0;
         step0_x1 <= x0 * Dn;
     end
@@ -131,7 +135,7 @@ module NewtonRaphsonIteration #(
     reg signed [MS - 1 : 0]     step1_x0; // S1.23
     reg        [MS - 1 : 0]     step1_x1; // Q2.x
     always @(posedge clk)
-    begin : step1
+    if (ce) begin : step1
         reg signed [(MS + 3) - 1 : 0] x1;
         x1 = $signed(step0_x1[(MS - 2) +: (MS + 2)]) + $signed(TWO);
         step1_x0 <= step0_x0;
@@ -145,7 +149,7 @@ module NewtonRaphsonIteration #(
     ////////////////////////////////////////////////////////////////////////////
     reg [MS + MS - 1 : 0] step2_x1; // Q3.x
     always @(posedge clk)
-    begin : step2
+    if (ce) begin : step2
         step2_x1 = step1_x0 * step1_x1;
         x1 <= { 1'b0, step2_x1[0 +: (MS - 1) + MS - 1] }; // Convert Q3.x to S1.x
     end
@@ -160,6 +164,7 @@ module NewtonRaphsonIterationInit #(
 )
 (
     input  wire                         clk,
+    input  wire                         ce,
     input  wire signed [FS - 1 : 0]     a, // S3.14
     input  wire signed [FS - 1 : 0]     b, // S3.14
     input  wire signed [FS - 1 : 0]     c, // S3.14
@@ -178,7 +183,7 @@ module NewtonRaphsonIterationInit #(
     reg signed [MS - 1 : 0]         step0_x; // S1.23
     reg signed [FS + MS - 1 : 0]    step0_x0; // S4.38
     always @(posedge clk)
-    begin
+    if (ce) begin
         step0_b <= b;
         step0_c <= c;
         step0_x <= D;
@@ -194,7 +199,7 @@ module NewtonRaphsonIterationInit #(
     reg signed [MS - 1 : 0] step1_x; // S1.23
     reg signed [MS - 1 : 0] step1_x0; // S4.x
     always @(posedge clk)
-    begin
+    if (ce) begin
         step1_c <= step0_c;
         step1_x <= step0_x;
         step1_x0 <= $signed(step0_x0[(FS + MS) - MS +: MS]) + ($signed(`ConvertFStoMS(step0_b)) >>> 1);
@@ -208,7 +213,7 @@ module NewtonRaphsonIterationInit #(
     reg signed [FS - 1 : 0]         step2_c; // S3.14
     reg signed [MS + MS - 1 : 0]    step2_x0; // S5.x
     always @(posedge clk)
-    begin
+    if (ce) begin
         step2_c <= step1_c;
         step2_x0 <= step1_x * step1_x0;
     end
@@ -219,7 +224,7 @@ module NewtonRaphsonIterationInit #(
     // Clocks: 1
     ////////////////////////////////////////////////////////////////////////////.x
     always @(posedge clk)
-    begin : step3
+    if (ce) begin : step3
         reg signed [MS - 1 : 0] tmp; // S5.x
         tmp = $signed(step2_x0[MS +: MS]) + ($signed(`ConvertFStoMS(step2_c)) >>> 2); 
         x0 <= $signed({ tmp[0 +: MS - 4], 4'b0 }); // Convert S5.x to S1.x by shiftig by four

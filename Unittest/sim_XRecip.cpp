@@ -37,6 +37,7 @@ TEST_CASE("Specific number", "[XRecip]")
 {
     VXRecip* top = new VXRecip;
 
+    top->ce = 1;
     top->in = 0x7fffff; // 0.5
     clk(top);
     top->in = 0; // To test the pipeline
@@ -54,10 +55,39 @@ TEST_CASE("Specific number", "[XRecip]")
     delete top;
 }
 
+TEST_CASE("CE stalls the pipeline", "[XRecip]")
+{
+    VXRecip* top = new VXRecip;
+
+    top->ce = 1;
+    top->in = 0x7fffff; // 0.5
+    clk(top);
+
+    top->in = 0; // To test the pipeline
+    top->ce = 0;
+    clk(top);
+    REQUIRE(top->out >> 24 != 2ULL);
+
+    top->ce = 1;
+    for (uint32_t i = 0; i < 11; i++)
+    {
+        clk(top);
+        REQUIRE(top->out >> 24 != 2ULL);
+    }
+    clk(top);
+    REQUIRE(top->out >> 24 == 2ULL);
+
+    // Final model cleanup
+    top->final();
+
+    // Destroy model
+    delete top;
+}
 
 TEST_CASE("Range", "[XRecip]")
 {
     VXRecip* top = new VXRecip;
+    top->ce = 1;
 
     for (uint32_t i = 0; i < (1 << 20); i++)
     {

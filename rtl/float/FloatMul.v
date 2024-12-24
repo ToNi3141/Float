@@ -27,6 +27,7 @@ module FloatMul
 )
 (
     input  wire                      clk,
+    input  wire                      ce,
     input  wire [FLOAT_SIZE - 1 : 0] facAIn,
     input  wire [FLOAT_SIZE - 1 : 0] facBIn,
     output wire [FLOAT_SIZE - 1 : 0] prod
@@ -53,7 +54,7 @@ module FloatMul
     reg                                 one_exponentUnderflow;
     reg                                 one_exponentOverflow;
     always @(posedge clk)
-    begin : UnpackAndCompute
+    if (ce) begin : UnpackAndCompute
         // Unpack
         reg  [FLOAT_SIZE - 1 : 0]   facA;
         reg  [FLOAT_SIZE - 1 : 0]   facB;
@@ -120,7 +121,7 @@ module FloatMul
     end
 
     always @(posedge clk)
-    begin : Pack
+    if (ce) begin : Pack
         reg  [EXPONENT_SIZE - 1 : 0] exponentSum;
         reg  [EXPONENT_SIZE : 0]     exponentSumTmp;
         reg  [MANTISSA_PROD_SIZE - 1 : 0] mantissaNormalized;
@@ -179,5 +180,5 @@ module FloatMul
     end
 
     ValueDelay #(.VALUE_SIZE(FLOAT_SIZE), .DELAY(DELAY)) 
-        currentIterationDelayer (.clk(clk), .in(prodReg), .out(prod));
+        currentIterationDelayer (.clk(clk), .ce(ce), .in(prodReg), .out(prod));
 endmodule

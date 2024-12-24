@@ -27,6 +27,7 @@ module FloatSub
 )
 (
     input  wire                      clk,
+    input  wire                      ce,
     input  wire [FLOAT_SIZE - 1 : 0] aIn,
     input  wire [FLOAT_SIZE - 1 : 0] bIn,
     output wire [FLOAT_SIZE - 1 : 0] sum
@@ -35,5 +36,5 @@ module FloatSub
 
     wire [FLOAT_SIZE - 1 : 0] comp;
     assign comp = {~bIn[SIGN_POS], bIn[SIGN_POS - 1 : 0]};
-    FloatAdd #(.MANTISSA_SIZE(MANTISSA_SIZE), .EXPONENT_SIZE(EXPONENT_SIZE), .ENABLE_OPTIMIZATION(ENABLE_OPTIMIZATION)) add(clk, aIn, comp, sum);
+    FloatAdd #(.MANTISSA_SIZE(MANTISSA_SIZE), .EXPONENT_SIZE(EXPONENT_SIZE), .ENABLE_OPTIMIZATION(ENABLE_OPTIMIZATION)) add(clk, ce, aIn, comp, sum);
 endmodule

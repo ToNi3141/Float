@@ -31,6 +31,7 @@ module IntToFloat
 )
 (
     input  wire                                 clk,
+    input  wire                                 ce,
 
     // This value can be used to shift the bias of the exponent in the float. 
     // This conversion can be useful when converting to a fix point to float format without any extra cost.
@@ -53,7 +54,7 @@ module IntToFloat
     reg  [UNSIGNED_INT_SIZE - 1 : 0]    one_number;
     reg                                 one_sign;
     always @(posedge clk)
-    begin : Prepare
+    if (ce) begin : Prepare
         reg [INT_SIZE - 1 : 0] numberUnsigned;
         numberUnsigned = ~in + 1;
         if ($signed(in) < 0)
@@ -71,7 +72,7 @@ module IntToFloat
     reg                                     two_sign;
     reg  [UNSIGNED_INT_SIZE - 1 : 0]        two_number;
     always @(posedge clk)
-    begin
+    if (ce) begin
         two_exponent <= exponent;
         two_sign <= one_sign;
         two_number <= one_number;
@@ -84,7 +85,7 @@ module IntToFloat
     reg                                 three_sign;
     reg  [UNSIGNED_INT_SIZE - 1 : 0]    three_number;
     always @(posedge clk)
-    begin : PreparePack
+    if (ce) begin : PreparePack
         reg [UNSIGNED_INT_SIZE - 1 : 0] tmp;
         reg [EXPONENT_SIZE - 1 : 0]     exp;
 
@@ -113,7 +114,7 @@ module IntToFloat
     end
 
     always @(posedge clk)
-    begin : Pack
+    if (ce) begin : Pack
         reg [UNSIGNED_INT_SIZE - 1 : 0] tmp;
 
         if (three_shiftLeft)
