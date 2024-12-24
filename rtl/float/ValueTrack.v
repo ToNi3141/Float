@@ -25,7 +25,7 @@ module ValueTrack
     input  wire aclk,
     input  wire resetn,
 
-    input  wire sigIncommingValue,
+    input  wire sigIncomingValue,
     input  wire sigOutgoingValue,
     output reg  valueInPipeline
 );
@@ -40,27 +40,27 @@ module ValueTrack
         else
         begin
             // Value comes into the pipeline and goes out --> obviously the pipeline contains values
-            if ((sigOutgoingValue == 1) && (sigIncommingValue == 1)) 
+            if ((sigOutgoingValue == 1) && (sigIncomingValue == 1)) 
             begin
                 valueInPipeline <= 1;
             end
             // Value goes out and no values comes in. 
             // The pipeline loses a value (decrement) but still contains something
-            if ((sigOutgoingValue == 1) && (sigIncommingValue == 0))
+            if ((sigOutgoingValue == 1) && (sigIncomingValue == 0))
             begin
                 valuesCounter <= valuesCounter - 1;
                 valueInPipeline <= 1;
             end
             // No values goes out but one comes in
             // The pipeline receives a new values (increment) therefor it contains values
-            if ((sigOutgoingValue == 0) && (sigIncommingValue == 1))
+            if ((sigOutgoingValue == 0) && (sigIncomingValue == 1))
             begin
                 valuesCounter <= valuesCounter + 1;
                 valueInPipeline <= 1;
             end
             // Nothing goes in or out. But the pipeline could still contain values.
             // Check the counter if values are still processed
-            if ((sigOutgoingValue == 0) && (sigIncommingValue == 0))
+            if ((sigOutgoingValue == 0) && (sigIncomingValue == 0))
             begin
                 valueInPipeline <= valuesCounter != 0;
             end      
