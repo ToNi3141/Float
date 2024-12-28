@@ -35,6 +35,7 @@ module FloatRecip
 )
 (
     input  wire                      clk,
+    input  wire                      ce,
     input  wire [FLOAT_SIZE - 1 : 0] in,
     output reg  [FLOAT_SIZE - 1 : 0] out
 );
@@ -57,10 +58,10 @@ module FloatRecip
     wire [SIGNED_MANZISSA_SIZE - 1 : 0] step1_mantissa;
 
     ValueDelay #(.VALUE_SIZE(EXPONENT_SIZE), .DELAY(10)) 
-        step1exponent (.clk(clk), .in(EXPONENT_BIAS - (step0_exp - EXPONENT_BIAS + 1)), .out(step1_exp));
+        step1exponent (.clk(clk), .ce(ce), .in(EXPONENT_BIAS - (step0_exp - EXPONENT_BIAS + 1)), .out(step1_exp));
 
     ValueDelay #(.VALUE_SIZE(1), .DELAY(10)) 
-        step1sign (.clk(clk), .in(step0_sign), .out(step1_sign));
+        step1sign (.clk(clk), .ce(ce), .in(step0_sign), .out(step1_sign));
 
     wire signed [SIGNED_MANZISSA_SIZE - 1 : 0]                              mt = { 1'b0, 1'b1, step0_mantissa[0 +: MANTISSA_SIZE] };
     wire        [(SIGNED_MANZISSA_SIZE - 1) + SIGNED_MANZISSA_SIZE - 1 : 0] step1_mantissa_big;
@@ -69,6 +70,7 @@ module FloatRecip
         .ITR(2)
     ) recip (
         .clk(clk),
+        .ce(ce),
         .d(mt),
         .v(step1_mantissa_big)
     );
@@ -80,7 +82,7 @@ module FloatRecip
     // Clocks: 1
     ////////////////////////////////////////////////////////////////////////////
     always @(posedge clk)
-    begin
+    if (ce) begin
         out <= { step1_sign, step1_exp + { EXPONENT_SIZE { !(step1_mantissa[MANTISSA_SIZE]) } }, step1_mantissa[0 +: MANTISSA_SIZE] };
     end
 

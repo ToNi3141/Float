@@ -46,9 +46,43 @@ void testConversion(VFloatToInt* top, int32_t result, uint32_t in, int8_t offset
     REQUIRE(top->out == result);
 }
 
+TEST_CASE("CE stalls the pipeline", "[FloatToInt]")
+{
+    VFloatToInt* top = new VFloatToInt;
+
+    top->ce = 1;
+    top->in = 0x3f800000;
+    top->offset = 0;
+    // The pipeline has a latency of 4 clocks until the result is computed.
+    clk(top);
+    REQUIRE(top->out != 1);
+
+    top->in = 0;
+    top->ce = 0;
+    clk(top);
+    REQUIRE(top->out != 1);
+    
+    top->ce = 1;
+    clk(top);
+    REQUIRE(top->out != 1);
+
+    clk(top);
+    REQUIRE(top->out != 1);
+
+    clk(top);
+    REQUIRE(top->out == 1);
+
+    // Final model cleanup
+    top->final();
+
+    // Destroy model
+    delete top;
+}
+
 TEST_CASE("Specific numbers", "[FloatToInt]")
 {
     VFloatToInt* top = new VFloatToInt;
+    top->ce = 1;
 
     testConversion(top, 0, 0x0);
 
@@ -106,6 +140,7 @@ TEST_CASE("Specific numbers", "[FloatToInt]")
 TEST_CASE("Exponent Offset", "[FloatToInt]")
 {
     VFloatToInt* top = new VFloatToInt;
+    top->ce = 1;
 
     testConversion(top, 8, 0x40800000, -1);
     testConversion(top, -8, 0xc0800000, -1);

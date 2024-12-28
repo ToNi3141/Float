@@ -34,6 +34,7 @@ module FloatToInt
 )
 (
     input  wire                                 clk,
+    input  wire                                 ce,
     // This value can be used to shift the bias of the exponent in the float. 
     // This conversion can be useful when converting to a fix point format without any extra cost.
     // For instance a offset of -1 is equal to a multiplication with 2.0,
@@ -58,7 +59,7 @@ module FloatToInt
     reg                     one_underflow;
     reg                     one_round;
     always @(posedge clk)
-    begin : Unpack
+    if (ce) begin : Unpack
         reg signed [EXPONENT_SIGNED_SIZE - 1 : 0]   exponent;
         reg signed [EXPONENT_SIGNED_SIZE - 1 : 0]   signedShiftSize;
         reg        [INT_SIZE - 1 : 0]               number;
@@ -99,7 +100,7 @@ module FloatToInt
 
     reg [FLOAT_SIZE - 1 : 0] two_out;
     always @(posedge clk)
-    begin : Pack
+    if (ce) begin : Pack
         reg                     underflow;
         reg                     overflow;
         reg                     sign;
@@ -145,5 +146,5 @@ module FloatToInt
     end
 
     ValueDelay #(.VALUE_SIZE(FLOAT_SIZE), .DELAY(DELAY)) 
-        currentIterationDelayer (.clk(clk), .in(two_out), .out(out));
+        currentIterationDelayer (.clk(clk), .ce(ce), .in(two_out), .out(out));
 endmodule

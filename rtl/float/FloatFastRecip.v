@@ -28,6 +28,7 @@ module FloatFastRecip
 )
 (
     input  wire                      clk,
+    input  wire                      ce,
     input  wire [FLOAT_SIZE - 1 : 0] in,
     output wire [FLOAT_SIZE - 1 : 0] out
 );
@@ -35,7 +36,7 @@ module FloatFastRecip
     reg [FLOAT_SIZE - 1 : 0] inSub;
 
     always @(posedge clk)
-    begin
+    if (ce) begin
         inSub <= (MAGIC_NUMBER[0 +: FLOAT_SIZE] - in) >> 1;
     end
 
@@ -48,6 +49,7 @@ module FloatFastRecip
     floatMul 
     (
         .clk(clk),
+        .ce(ce),
         .facAIn(inSub),
         .facBIn(inSub),
         .prod(out)

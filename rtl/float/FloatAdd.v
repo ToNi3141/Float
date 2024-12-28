@@ -27,6 +27,7 @@ module FloatAdd
 )
 (
     input  wire                      clk,
+    input  wire                      ce,
     input  wire [FLOAT_SIZE - 1 : 0] aIn,
     input  wire [FLOAT_SIZE - 1 : 0] bIn,
     output reg  [FLOAT_SIZE - 1 : 0] sum
@@ -58,7 +59,7 @@ module FloatAdd
     reg  [MANTISSA_CALC_SIZE - 1 : 0] one_smallNumberMantissaDenormalized;
     reg                               one_exponentDiffGreaterZero;
     always @(posedge clk)
-    begin : UnpackAndAdapt
+    if (ce) begin : UnpackAndAdapt
         reg  [FLOAT_SIZE - 1 : 0] bigNumber;
         reg  [FLOAT_SIZE - 1 : 0] smallNumber;
         reg                       expSmallGreaterThanZero;
@@ -110,7 +111,7 @@ module FloatAdd
     reg  [EXPONENT_SIZE - 1 : 0]      two_bigNumberExponent;
     reg  [EXPONENT_SIZE - 1 : 0]      two_smallNumberExponent;
     always @(posedge clk)
-    begin : Calc
+    if (ce) begin : Calc
         reg  [MANTISSA_CALC_SIZE - 1 : 0] smallNumberMantissaDenormalized;
         reg  [MANTISSA_CALC_SIZE - 1 : 0] bigNumberMantissaSigned;
         reg  [MANTISSA_CALC_SIZE - 1 : 0] smallNumberMantissaSigned;
@@ -172,7 +173,7 @@ module FloatAdd
     reg                                     three_sumMantissaSign;
     reg  [MANTISSA_ONE_POS_SIZE - 1 : 0]    three_exponentCorrection;
     always @(posedge clk)
-    begin
+    if (ce) begin
         three_bigNumberExponent <= two_bigNumberExponent;
         three_smallNumberExponent <= two_smallNumberExponent;
         three_sumMantissa <= two_mantissaSum;
@@ -181,7 +182,7 @@ module FloatAdd
     end
 
     always @(posedge clk)
-    begin : Pack
+    if (ce) begin : Pack
         reg  [EXPONENT_SIZE - 1 : 0] sumExponent;
         reg  [MANTISSA_SIZE - 1 : 0] normalizedMantissa;
         reg  [MANTISSA_CALC_SIZE - 1 : 0] normalizedMantissaCalc;

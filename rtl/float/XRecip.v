@@ -32,6 +32,7 @@ module XRecip
 )
 (
     input  wire                                         clk,
+    input  wire                                         ce,
     input  wire [NUMBER_WIDTH - 1 : 0]                  in,
     output reg  [NUMBER_WIDTH + NUMBER_WIDTH - 1 : 0]   out
 );
@@ -52,10 +53,9 @@ module XRecip
         .exponent(exponent)
     );
     always @(posedge clk)
-    begin
+    if (ce) begin
         step0_number <= in;
         step0_exponent <= exponent;
-        
     end
 
     ////////////////////////////////////////////////////////////////////////////
@@ -66,7 +66,7 @@ module XRecip
     reg  [SIGNED_NUMBER_WIDTH - 1 : 0]  step1_number;
     reg  [EXPONENT_SIZE - 1 : 0]        step1_exponent;
     always @(posedge clk)
-    begin
+    if (ce) begin
         step1_exponent <= step0_exponent;
         step1_number <= { 1'b0, step0_number << (NUMBER_WIDTH[0 +: EXPONENT_SIZE] - step0_exponent - 1) };
     end
@@ -84,12 +84,13 @@ module XRecip
         .ITR(ITERATIONS)
     ) step2recip (
         .clk(clk),
+        .ce(ce),
         .d(step1_number),
         .v(step2_number)
     );
 
     ValueDelay #(.VALUE_SIZE(EXPONENT_SIZE), .DELAY(10)) 
-        step2exponent (.clk(clk), .in(step1_exponent), .out(step2_exponent));
+        step2exponent (.clk(clk), .ce(ce), .in(step1_exponent), .out(step2_exponent));
 
 
     ////////////////////////////////////////////////////////////////////////////
@@ -97,9 +98,8 @@ module XRecip
     // Denormalize 
     // Clocks: 1
     ////////////////////////////////////////////////////////////////////////////
-
     always @(posedge clk)
-    begin
+    if (ce) begin
         out <= step2_number[0 +: NUMBER_WIDTH + NUMBER_WIDTH] >> step2_exponent;
     end
 

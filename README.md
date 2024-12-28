@@ -10,6 +10,7 @@ Goal was to use as less clock cycles as possible, have pipelining (one calculati
 - Latency: __4 Clock cycles__ (except FloatRecip which requires 11)
 - FloatFastRecip to get a fast approximation for ```1/x``` (error is around 5%). It is a very small and fast implementation
 - FloatRecip to get a 100% accurate approximation of ```1/x``` with floats using a 23 bit mantissa, but at the cost of utilization and delay. It uses the newton method to approximate ```1/x```.
+- Clock enable (ce) available to stall the pipeline
 - IEEE 754 compatible but not compliant
 - All IEEE 754 formats are supported like: half (s=1, e=5, m=10), single (s=1, e=8, m=23), double (s=1, e=11, m=52), ...
 

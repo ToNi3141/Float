@@ -36,24 +36,62 @@ void clk(VFloatRecip* t)
 TEST_CASE("Specific number", "[FloatRecip]")
 {
     VFloatRecip* top = new VFloatRecip;
+    top->ce = 1;
 
     float a = 0.999999940395f; // Number which observed to trigger rounding issues
     top->in = *(uint32_t*)&a;
     clk(top);
-    clk(top);
-    clk(top);
-    clk(top);
-    clk(top);
-    clk(top);
-    clk(top);
-    clk(top);
-    clk(top);
-    clk(top);
-    clk(top);
     top->in = 0; // To test the pipeline
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
     float out;
     *(uint32_t*)&out = top->out;
 
+    REQUIRE(Approx(out).epsilon(0.000001) == (1.0f / a));
+
+    // Final model cleanup
+    top->final();
+
+    // Destroy model
+    delete top;
+}
+
+TEST_CASE("CE stalls the pipeline", "[FloatRecip]")
+{
+    VFloatRecip* top = new VFloatRecip;
+    float a = 2;
+
+    top->ce = 1;
+    top->in = *(uint32_t*)&a;
+    clk(top);
+    top->in = 0; // To test the pipeline
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+    clk(top);
+
+    top->ce = 0;
+    clk(top);
+    float out;
+    *(uint32_t*)&out = top->out;
+    REQUIRE(Approx(out).epsilon(0.000001) != (1.0f / a));
+
+    top->ce = 1;
+    clk(top);
+    *(uint32_t*)&out = top->out;
     REQUIRE(Approx(out).epsilon(0.000001) == (1.0f / a));
 
     // Final model cleanup
@@ -67,6 +105,7 @@ TEST_CASE("Specific number", "[FloatRecip]")
 TEST_CASE("Range", "[FloatRecip]")
 {
     VFloatRecip* top = new VFloatRecip;
+    top->ce = 1;
 
     for (int i = -1000000; i < 1000000; i++)
     {
