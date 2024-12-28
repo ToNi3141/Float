@@ -32,6 +32,7 @@ module ExampleNewtonRecip
 )
 (
     input  wire                      clk,
+    input  wire                      ce,
     input  wire [FLOAT_SIZE - 1 : 0] in,
     output wire [FLOAT_SIZE - 1 : 0] out
 );
@@ -55,7 +56,7 @@ module ExampleNewtonRecip
         signDelayInst (.clk(clk), .in(in[SIGN_POS]), .out(signDelay));
 
     always @(posedge clk)
-    begin
+    if (ce) begin
         inUnsignedReg <= inUnsigned;
         invEstimationReg <= invEstimation;
     end
@@ -72,6 +73,7 @@ module ExampleNewtonRecip
             .EXPONENT_SIZE(EXPONENT_SIZE)
         ) newtonIteration (
             .clk(clk),
+            .ce(ce),
             .x(x[i]),
             .currentIteration(iteration[i]),
             .newIteration(iteration[i + 1])
@@ -92,6 +94,7 @@ module ReciprocalNewtonIteration #(
 )
 (
     input  wire                      clk,
+    input  wire                      ce,
     input  wire [FLOAT_SIZE - 1 : 0] x,
     input  wire [FLOAT_SIZE - 1 : 0] currentIteration,
     output wire [FLOAT_SIZE - 1 : 0] newIteration
@@ -111,6 +114,7 @@ module ReciprocalNewtonIteration #(
     floatMul 
     (
         .clk(clk),
+        .ce(ce),
         .facAIn(x),
         .facBIn(currentIteration),
         .prod(currItMultX)
@@ -125,6 +129,7 @@ module ReciprocalNewtonIteration #(
     floatSub
     (
         .clk(clk),
+        .ce(ce),
         .aIn(TWO_POINT_ZERO[0 +: FLOAT_SIZE]),
         .bIn(currItMultX),
         .sum(twoMinusX)
@@ -139,11 +144,12 @@ module ReciprocalNewtonIteration #(
     floatMul2
     (
         .clk(clk),
+        .ce(ce),
         .facAIn(currentIterationDelay),
         .facBIn(twoMinusX),
         .prod(newIteration)
     );
 
     ValueDelay #(.VALUE_SIZE(FLOAT_SIZE), .DELAY(6)) 
-        currentIterationDelayer (.clk(clk), .in(currentIteration), .out(currentIterationDelay));
+        currentIterationDelayer (.clk(clk), .ce(ce), .in(currentIteration), .out(currentIterationDelay));
 endmodule

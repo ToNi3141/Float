@@ -60,6 +60,7 @@ float inv_fast(float x) {
 TEST_CASE("Specific numbers", "[ExampleNewtonRecip]")
 {
     VExampleNewtonRecip* top = new VExampleNewtonRecip;
+    top->ce = 1;
 
     for (int i = -1000000; i < 1000000; i++)
     {
