@@ -33,12 +33,12 @@ void clk(VXRecip* t)
     t->eval();
 }
 
-TEST_CASE("Specific number", "[XRecip]")
+TEST_CASE("Specific number 0.5 (Q0.24)", "[XRecip]")
 {
     VXRecip* top = new VXRecip;
 
     top->ce = 1;
-    top->in = 0x7fffff; // 0.5
+    top->in = 0x7fffff; // 0.5 (Q0.24)
     clk(top);
     top->in = 0; // To test the pipeline
     for (uint32_t i = 0; i < 12; i++)
@@ -47,6 +47,28 @@ TEST_CASE("Specific number", "[XRecip]")
     }
 
     REQUIRE(top->out >> 24 == 2ULL);
+
+    // Final model cleanup
+    top->final();
+
+    // Destroy model
+    delete top;
+}
+
+TEST_CASE("Specific number 2.0 (Q16.8)", "[XRecip]")
+{
+    VXRecip* top = new VXRecip;
+
+    top->ce = 1;
+    top->in = 0x200; // 2.0 (Q16.8)
+    clk(top);
+    top->in = 0; // To test the pipeline
+    for (uint32_t i = 0; i < 12; i++)
+    {
+        clk(top);
+    }
+
+    REQUIRE(top->out == 0x007ffffff6d5); // Q8.40 (Note: the last few bits are not 0xfff because of imprecisions of the newton calculation)
 
     // Final model cleanup
     top->final();

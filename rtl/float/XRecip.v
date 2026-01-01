@@ -18,7 +18,7 @@
 // Integer reciprocal
 // It automatically normalizes a number to calculate the reciprocal of that.
 // If the input number is a integer number in the format Q10.0, then the output
-// will be a number in the format Q0.10. A Q0.10 as input is outputted as Q10.10.
+// will be a number in the format Q0.20. A Q0.10 as input is outputted as Q10.10.
 // This module is pipelined. It can calculate one reciprocal per clock.
 // It requires 7 + (ITERATIONS * 3) clocks to calculate the inverse of a number.
 // Every iteration doubles the precision, starting with 6 bit initial estimation.
