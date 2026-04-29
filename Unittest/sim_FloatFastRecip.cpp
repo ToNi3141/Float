@@ -52,7 +52,7 @@ __inline__ float __attribute__((const)) reciprocal( float x ) {
 
 TEST_CASE("Specific numbers", "[FloatFastRecip]")
 {
-    VFloatFastRecip* top = new VFloatFastRecip;
+    VFloatFastRecip* top = new VFloatFastRecip { new VerilatedContext };
     top->ce = 1;
 
     for (int i = 0; i < 1000000; i++)

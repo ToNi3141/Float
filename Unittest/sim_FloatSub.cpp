@@ -53,7 +53,7 @@ void testSubf(VFloatSub* top, float a, float b)
 
 TEST_CASE( "Regression test. Check if small substractions have no effect on the result", "[Substraction]" ) 
 {
-    VFloatSub* top = new VFloatSub;
+    VFloatSub* top = new VFloatSub { new VerilatedContext };
     top->ce = 1;
 
     for (int i = 0; i < 100; i++)
@@ -71,7 +71,7 @@ TEST_CASE( "Regression test. Check if small substractions have no effect on the 
 TEST_CASE("CE stalls the pipeline", "[Substraction]")
 {
     int pipelineCounter = 3;
-    VFloatSub* top = new VFloatSub;
+    VFloatSub* top = new VFloatSub { new VerilatedContext };
 
     float a = 4;
     float b = 2;
@@ -113,7 +113,7 @@ TEST_CASE("CE stalls the pipeline", "[Substraction]")
 
 TEST_CASE( "Check cascating add ", "[Substraction]" ) 
 {
-    VFloatSub* top = new VFloatSub;
+    VFloatSub* top = new VFloatSub { new VerilatedContext };
     top->ce = 1;
     top->sum = 0;
     for (uint32_t i = 0; i < 1000001; i++)
@@ -136,7 +136,7 @@ TEST_CASE( "Check cascating add ", "[Substraction]" )
 
 TEST_CASE( "Check cascating sub ", "[Substraction]" ) 
 {
-    VFloatSub* top = new VFloatSub;
+    VFloatSub* top = new VFloatSub { new VerilatedContext };
     top->ce = 1;
 
     top->sum = 0;
@@ -160,7 +160,7 @@ TEST_CASE( "Check cascating sub ", "[Substraction]" )
 
 TEST_CASE("Specific numbers", "[Substraction]")
 {
-    VFloatSub* top = new VFloatSub;
+    VFloatSub* top = new VFloatSub { new VerilatedContext };
     top->ce = 1;
 
     // Tests with exponent of 0 and small mantissa

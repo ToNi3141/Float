@@ -47,7 +47,7 @@ void testConversion(VIntToFloat* top, int32_t in, uint32_t result, int8_t offset
 
 TEST_CASE("CE stalls the pipeline", "[IntToFloat]")
 {
-    VIntToFloat* top = new VIntToFloat;
+    VIntToFloat* top = new VIntToFloat { new VerilatedContext };
 
     top->ce = 1;
     top->in = 1;
@@ -80,7 +80,7 @@ TEST_CASE("CE stalls the pipeline", "[IntToFloat]")
 
 TEST_CASE("Specific numbers", "[IntToFloat]")
 {
-    VIntToFloat* top = new VIntToFloat;
+    VIntToFloat* top = new VIntToFloat { new VerilatedContext };
     top->ce = 1;
 
     testConversion(top, 0, 0x0);
@@ -121,7 +121,7 @@ TEST_CASE("Specific numbers", "[IntToFloat]")
 
 TEST_CASE("Exponent Offset", "[IntToFloat]")
 {
-    VIntToFloat* top = new VIntToFloat;
+    VIntToFloat* top = new VIntToFloat { new VerilatedContext };
     top->ce = 1;
 
     testConversion(top, 8, 0x40800000, -1);

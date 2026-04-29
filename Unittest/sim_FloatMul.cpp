@@ -54,7 +54,7 @@ void commutativeMulTest(VFloatMul* top, uint32_t a, uint32_t b, uint32_t result)
 TEST_CASE("Range (4 * b[-100'000.00 to 100'000.00])", "[Multiplication]")
 {
     int pipelineCounter = 3;
-    VFloatMul* top = new VFloatMul;
+    VFloatMul* top = new VFloatMul { new VerilatedContext };
     top->ce = 1;
     for (int i = -10000000; i < 10000000; i++)
     {
@@ -82,7 +82,7 @@ TEST_CASE("Range (4 * b[-100'000.00 to 100'000.00])", "[Multiplication]")
 TEST_CASE("CE stalls the pipeline", "[Multiplication]")
 {
     int pipelineCounter = 3;
-    VFloatMul* top = new VFloatMul;
+    VFloatMul* top = new VFloatMul { new VerilatedContext };
 
     float a = 4;
     float result = 16;
@@ -124,7 +124,7 @@ TEST_CASE("CE stalls the pipeline", "[Multiplication]")
 TEST_CASE("Range (a[-100'000.00 to 100'000.00] * 4)", "[Multiplication]")
 {
     int pipelineCounter = 3;
-    VFloatMul* top = new VFloatMul;
+    VFloatMul* top = new VFloatMul { new VerilatedContext };
     top->ce = 1;
     for (int i = -10000000; i < 10000000; i++)
     {
@@ -152,7 +152,7 @@ TEST_CASE("Range (a[-100'000.00 to 100'000.00] * 4)", "[Multiplication]")
 
 TEST_CASE("Specific numbers", "[Multiplication]")
 {
-    VFloatMul* top = new VFloatMul;
+    VFloatMul* top = new VFloatMul { new VerilatedContext };
     top->ce = 1;
 
     // Tests with exponent of 0 and small mantissa

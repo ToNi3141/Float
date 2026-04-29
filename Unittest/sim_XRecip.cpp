@@ -35,7 +35,7 @@ void clk(VXRecip* t)
 
 TEST_CASE("Specific number 0.5 (Q0.24)", "[XRecip]")
 {
-    VXRecip* top = new VXRecip;
+    VXRecip* top = new VXRecip { new VerilatedContext };
 
     top->ce = 1;
     top->in = 0x7fffff; // 0.5 (Q0.24)
@@ -57,7 +57,7 @@ TEST_CASE("Specific number 0.5 (Q0.24)", "[XRecip]")
 
 TEST_CASE("Specific number 2.0 (Q16.8)", "[XRecip]")
 {
-    VXRecip* top = new VXRecip;
+    VXRecip* top = new VXRecip { new VerilatedContext };
 
     top->ce = 1;
     top->in = 0x200; // 2.0 (Q16.8)
@@ -79,7 +79,7 @@ TEST_CASE("Specific number 2.0 (Q16.8)", "[XRecip]")
 
 TEST_CASE("CE stalls the pipeline", "[XRecip]")
 {
-    VXRecip* top = new VXRecip;
+    VXRecip* top = new VXRecip { new VerilatedContext };
 
     top->ce = 1;
     top->in = 0x7fffff; // 0.5
@@ -108,7 +108,7 @@ TEST_CASE("CE stalls the pipeline", "[XRecip]")
 
 TEST_CASE("Range", "[XRecip]")
 {
-    VXRecip* top = new VXRecip;
+    VXRecip* top = new VXRecip { new VerilatedContext };
     top->ce = 1;
 
     for (uint32_t i = 0; i < (1 << 20); i++)

@@ -23,8 +23,6 @@ module IntToFloat
     parameter MANTISSA_SIZE = 23,
     parameter EXPONENT_SIZE = 8,
 
-    // Has to be at least the size of the mantissa plus the hidden bit and plus sign. 
-    // In other words: MANTISSA_SIZE + 2.
     parameter INT_SIZE = 32, 
 
     localparam FLOAT_SIZE = 1 + EXPONENT_SIZE + MANTISSA_SIZE
@@ -42,35 +40,38 @@ module IntToFloat
     input  wire        [INT_SIZE - 1 : 0]       in,
     output reg         [FLOAT_SIZE - 1 : 0]     out
 );
-    localparam SIGN_POS = MANTISSA_SIZE + EXPONENT_SIZE;
-    localparam UNSIGNED_INT_SIZE = INT_SIZE - 1;
-    localparam INT_SIGN_POS = INT_SIZE - 1;
+    // Internal working integer width. Must be large enough so that the unsigned
+    // magnitude (WORK_INT_SIZE - 1 bits) can hold the mantissa shift result.
+    localparam WORK_INT_SIZE = (INT_SIZE > (MANTISSA_SIZE + 2)) ? INT_SIZE : (MANTISSA_SIZE + 2);
+    localparam UNSIGNED_WORK_INT_SIZE = WORK_INT_SIZE - 1;
     localparam [EXPONENT_SIZE - 1 : 0] EXPONENT_BIAS = ((2 ** (EXPONENT_SIZE - 1)) - 1);
-    localparam USNIGNED_INT_SIZE_LOG2 = $clog2(UNSIGNED_INT_SIZE);
+    localparam UNSIGNED_WORK_INT_SIZE_LOG2 = $clog2(UNSIGNED_WORK_INT_SIZE);
 
-    wire [USNIGNED_INT_SIZE_LOG2 - 1 : 0] exponent;
-    FindExponent #(.EXPONENT_SIZE(USNIGNED_INT_SIZE_LOG2), .VALUE_SIZE(UNSIGNED_INT_SIZE)) findExponent (one_number, exponent);
+    wire [UNSIGNED_WORK_INT_SIZE_LOG2 - 1 : 0] exponent;
+    FindExponent #(.EXPONENT_SIZE(UNSIGNED_WORK_INT_SIZE_LOG2), .VALUE_SIZE(UNSIGNED_WORK_INT_SIZE)) findExponent (one_number, exponent);
 
-    reg  [UNSIGNED_INT_SIZE - 1 : 0]    one_number;
+    reg  [UNSIGNED_WORK_INT_SIZE - 1 : 0]    one_number;
     reg                                 one_sign;
     always @(posedge clk)
     if (ce) begin : Prepare
-        reg [INT_SIZE - 1 : 0] numberUnsigned;
-        numberUnsigned = ~in + 1;
+        reg [WORK_INT_SIZE - 1 : 0] inExt;
+        reg [WORK_INT_SIZE - 1 : 0] numberUnsigned;
+        inExt = {{(WORK_INT_SIZE - INT_SIZE){in[INT_SIZE - 1]}}, in};
+        numberUnsigned = ~inExt + 1;
         if ($signed(in) < 0)
         begin
-            one_number <= numberUnsigned[0 +: UNSIGNED_INT_SIZE];
+            one_number <= numberUnsigned[0 +: UNSIGNED_WORK_INT_SIZE];
         end
         else 
         begin
-            one_number <= in[0 +: UNSIGNED_INT_SIZE];
+            one_number <= inExt[0 +: UNSIGNED_WORK_INT_SIZE];
         end
-        one_sign <= in[INT_SIGN_POS];
+        one_sign <= in[INT_SIZE - 1];
     end
 
-    reg  [USNIGNED_INT_SIZE_LOG2 - 1 : 0]   two_exponent;
-    reg                                     two_sign;
-    reg  [UNSIGNED_INT_SIZE - 1 : 0]        two_number;
+    reg  [UNSIGNED_WORK_INT_SIZE_LOG2 - 1 : 0] two_exponent;
+    reg                                        two_sign;
+    reg  [UNSIGNED_WORK_INT_SIZE - 1 : 0]      two_number;
     always @(posedge clk)
     if (ce) begin
         two_exponent <= exponent;
@@ -78,20 +79,19 @@ module IntToFloat
         two_number <= one_number;
     end
 
-    reg                                 three_mantissaOverflow;
-    reg                                 three_shiftLeft;    
-    reg  [USNIGNED_INT_SIZE_LOG2 - 1 : 0] three_shiftSize;
-    reg  [EXPONENT_SIZE - 1 : 0]        three_exponent;
-    reg                                 three_sign;
-    reg  [UNSIGNED_INT_SIZE - 1 : 0]    three_number;
+    reg                                        three_mantissaOverflow;
+    reg                                        three_shiftLeft;    
+    reg  [UNSIGNED_WORK_INT_SIZE_LOG2 - 1 : 0] three_shiftSize;
+    reg  [EXPONENT_SIZE - 1 : 0]               three_exponent;
+    reg                                        three_sign;
+    reg  [UNSIGNED_WORK_INT_SIZE - 1 : 0]      three_number;
     always @(posedge clk)
     if (ce) begin : PreparePack
-        reg [UNSIGNED_INT_SIZE - 1 : 0] tmp;
-        reg [EXPONENT_SIZE - 1 : 0]     exp;
+        reg [EXPONENT_SIZE - 1 : 0] exp;
 
-        three_mantissaOverflow = two_number[two_exponent - MANTISSA_SIZE[0 +: USNIGNED_INT_SIZE_LOG2] - 1];
-        three_shiftLeft = two_exponent < MANTISSA_SIZE[0 +: USNIGNED_INT_SIZE_LOG2];
-        exp = {{(EXPONENT_SIZE - USNIGNED_INT_SIZE_LOG2){1'h0}}, two_exponent} + (EXPONENT_BIAS + offset);
+        three_mantissaOverflow = two_number[two_exponent - MANTISSA_SIZE[0 +: UNSIGNED_WORK_INT_SIZE_LOG2] - 1];
+        three_shiftLeft = two_exponent < MANTISSA_SIZE[0 +: UNSIGNED_WORK_INT_SIZE_LOG2];
+        exp = {{(EXPONENT_SIZE - UNSIGNED_WORK_INT_SIZE_LOG2){1'h0}}, two_exponent} + (EXPONENT_BIAS + offset);
         if (two_number == 0)
         begin
             three_number <= 0;
@@ -99,13 +99,13 @@ module IntToFloat
         end
         else if (three_shiftLeft)
         begin
-            three_shiftSize <= MANTISSA_SIZE[0 +: USNIGNED_INT_SIZE_LOG2] - two_exponent;
+            three_shiftSize <= MANTISSA_SIZE[0 +: UNSIGNED_WORK_INT_SIZE_LOG2] - two_exponent;
             three_number <= two_number;
             three_exponent <= exp;
         end
         else
         begin
-            three_shiftSize <= ((two_exponent + {{(USNIGNED_INT_SIZE_LOG2 - 1){1'b0}}, three_mantissaOverflow}) - MANTISSA_SIZE[0 +: USNIGNED_INT_SIZE_LOG2]);
+            three_shiftSize <= ((two_exponent + {{(UNSIGNED_WORK_INT_SIZE_LOG2 - 1){1'b0}}, three_mantissaOverflow}) - MANTISSA_SIZE[0 +: UNSIGNED_WORK_INT_SIZE_LOG2]);
             three_number <= two_number;
             three_exponent <= exp + {{(EXPONENT_SIZE - 1){1'b0}}, three_mantissaOverflow};
         end
@@ -115,7 +115,7 @@ module IntToFloat
 
     always @(posedge clk)
     if (ce) begin : Pack
-        reg [UNSIGNED_INT_SIZE - 1 : 0] tmp;
+        reg [UNSIGNED_WORK_INT_SIZE - 1 : 0] tmp;
 
         if (three_shiftLeft)
         begin
@@ -125,6 +125,11 @@ module IntToFloat
         begin
             tmp = three_number >> three_shiftSize;
         end
-        out <= {three_sign, three_exponent, tmp[0 +: MANTISSA_SIZE] + {{(MANTISSA_SIZE - 1){1'b0}}, three_mantissaOverflow}};
+
+        out <= {
+            three_sign,
+            three_exponent,
+            tmp[0 +: MANTISSA_SIZE] + {{(MANTISSA_SIZE - 1){1'b0}}, three_mantissaOverflow}
+        };
     end
 endmodule

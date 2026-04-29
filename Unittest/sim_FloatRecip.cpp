@@ -35,7 +35,7 @@ void clk(VFloatRecip* t)
 
 TEST_CASE("Specific number", "[FloatRecip]")
 {
-    VFloatRecip* top = new VFloatRecip;
+    VFloatRecip* top = new VFloatRecip { new VerilatedContext };
     top->ce = 1;
 
     float a = 0.999999940395f; // Number which observed to trigger rounding issues
@@ -66,7 +66,7 @@ TEST_CASE("Specific number", "[FloatRecip]")
 
 TEST_CASE("CE stalls the pipeline", "[FloatRecip]")
 {
-    VFloatRecip* top = new VFloatRecip;
+    VFloatRecip* top = new VFloatRecip { new VerilatedContext };
     float a = 2;
 
     top->ce = 1;
@@ -104,7 +104,7 @@ TEST_CASE("CE stalls the pipeline", "[FloatRecip]")
 
 TEST_CASE("Range", "[FloatRecip]")
 {
-    VFloatRecip* top = new VFloatRecip;
+    VFloatRecip* top = new VFloatRecip { new VerilatedContext };
     top->ce = 1;
 
     for (int i = -1000000; i < 1000000; i++)
