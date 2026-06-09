@@ -47,10 +47,13 @@ module IntToFloat
     localparam [EXPONENT_SIZE - 1 : 0] EXPONENT_BIAS = ((2 ** (EXPONENT_SIZE - 1)) - 1);
     localparam UNSIGNED_WORK_INT_SIZE_LOG2 = $clog2(UNSIGNED_WORK_INT_SIZE);
 
+    // Declared here (before first use below) so the tool does not implicitly
+    // infer a 1-bit wire from the FindExponent port connection.
+    reg  [UNSIGNED_WORK_INT_SIZE - 1 : 0]    one_number;
+
     wire [UNSIGNED_WORK_INT_SIZE_LOG2 - 1 : 0] exponent;
     FindExponent #(.EXPONENT_SIZE(UNSIGNED_WORK_INT_SIZE_LOG2), .VALUE_SIZE(UNSIGNED_WORK_INT_SIZE)) findExponent (one_number, exponent);
 
-    reg  [UNSIGNED_WORK_INT_SIZE - 1 : 0]    one_number;
     reg                                 one_sign;
     always @(posedge clk)
     if (ce) begin : Prepare
@@ -88,16 +91,21 @@ module IntToFloat
     always @(posedge clk)
     if (ce) begin : PreparePack
         reg [EXPONENT_SIZE - 1 : 0] exp;
+        // Combinational temporaries feeding the pipeline registers below. Driving
+        // the module-scoped registers with non-blocking assignments only keeps them
+        // from racing with the consuming Pack stage.
+        reg                         mantissaOverflow;
+        reg                         shiftLeft;
 
-        three_mantissaOverflow = two_number[two_exponent - MANTISSA_SIZE[0 +: UNSIGNED_WORK_INT_SIZE_LOG2] - 1];
-        three_shiftLeft = two_exponent < MANTISSA_SIZE[0 +: UNSIGNED_WORK_INT_SIZE_LOG2];
+        mantissaOverflow = two_number[two_exponent - MANTISSA_SIZE[0 +: UNSIGNED_WORK_INT_SIZE_LOG2] - 1];
+        shiftLeft = two_exponent < MANTISSA_SIZE[0 +: UNSIGNED_WORK_INT_SIZE_LOG2];
         exp = {{(EXPONENT_SIZE - UNSIGNED_WORK_INT_SIZE_LOG2){1'h0}}, two_exponent} + (EXPONENT_BIAS + offset);
         if (two_number == 0)
         begin
             three_number <= 0;
             three_exponent <= 0;
         end
-        else if (three_shiftLeft)
+        else if (shiftLeft)
         begin
             three_shiftSize <= MANTISSA_SIZE[0 +: UNSIGNED_WORK_INT_SIZE_LOG2] - two_exponent;
             three_number <= two_number;
@@ -105,11 +113,13 @@ module IntToFloat
         end
         else
         begin
-            three_shiftSize <= ((two_exponent + {{(UNSIGNED_WORK_INT_SIZE_LOG2 - 1){1'b0}}, three_mantissaOverflow}) - MANTISSA_SIZE[0 +: UNSIGNED_WORK_INT_SIZE_LOG2]);
+            three_shiftSize <= ((two_exponent + {{(UNSIGNED_WORK_INT_SIZE_LOG2 - 1){1'b0}}, mantissaOverflow}) - MANTISSA_SIZE[0 +: UNSIGNED_WORK_INT_SIZE_LOG2]);
             three_number <= two_number;
-            three_exponent <= exp + {{(EXPONENT_SIZE - 1){1'b0}}, three_mantissaOverflow};
+            three_exponent <= exp + {{(EXPONENT_SIZE - 1){1'b0}}, mantissaOverflow};
         end
 
+        three_mantissaOverflow <= mantissaOverflow;
+        three_shiftLeft <= shiftLeft;
         three_sign <= two_sign;
     end
 

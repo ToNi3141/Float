@@ -147,9 +147,9 @@ module NewtonRaphsonIteration #(
     // x1 = x0 * x1
     // Clocks: 1
     ////////////////////////////////////////////////////////////////////////////
-    reg [MS + MS - 1 : 0] step2_x1; // Q3.x
     always @(posedge clk)
     if (ce) begin : step2
+        reg [MS + MS - 1 : 0] step2_x1; // Q3.x
         step2_x1 = step1_x0 * step1_x1;
         x1 <= { 1'b0, step2_x1[0 +: (MS - 1) + MS - 1] }; // Convert Q3.x to S1.x
     end
