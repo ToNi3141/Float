@@ -46,6 +46,10 @@ module FloatAdd
     localparam EXPONENT_INVALID_VALUE = (2 ** MANTISSA_ONE_POS_SIZE) - 1;
 
 
+    // Declared here (before first use below) so the tool does not implicitly
+    // infer a 1-bit wire from the FindExponent port connection.
+    reg  [MANTISSA_CALC_SIZE - 1 : 0] two_mantissaSum;
+
     wire [MANTISSA_ONE_POS_SIZE - 1 : 0] exponentCorrection;
     FindExponent #(.EXPONENT_SIZE(MANTISSA_ONE_POS_SIZE), .VALUE_SIZE(MANTISSA_CALC_SIZE)) findExponent (two_mantissaSum, exponentCorrection);
 
@@ -64,6 +68,16 @@ module FloatAdd
         reg  [FLOAT_SIZE - 1 : 0] smallNumber;
         reg                       expSmallGreaterThanZero;
         reg                       expBigGreaterThanZero;
+        // Combinational temporaries. These feed the pipeline registers below; using
+        // blocking assignments on locals keeps the read-after-write semantics this
+        // computation relies on, while the module-scoped registers are driven only
+        // by non-blocking assignments (so they cannot race with the consuming stage).
+        reg  [EXPONENT_SIZE - 1 : 0]      bigNumberExponent;
+        reg  [EXPONENT_SIZE - 1 : 0]      smallNumberExponent;
+        reg  [MANTISSA_CALC_SIZE - 1 : 0] bigNumberMantissa;
+        reg  [EXPONENT_SIZE - 1 : 0]      exponentDiff;
+        reg  [MANTISSA_CALC_SIZE - 1 : 0] smallNumberMantissa;
+        reg  [MANTISSA_CALC_SIZE - 1 : 0] smallNumberMantissaDenormalized;
 
         // The addition requires that we have the same exponent for the big and small number.
         // Usually the small number will be adapted to the big number.
@@ -72,41 +86,46 @@ module FloatAdd
             bigNumber = bIn;
             smallNumber = aIn;
         end
-        else 
+        else
         begin
             bigNumber = aIn;
             smallNumber = bIn;
         end
-        one_bigNumberExponent = bigNumber[EXPONENT_POS +: EXPONENT_SIZE];
-        one_smallNumberExponent = smallNumber[EXPONENT_POS +: EXPONENT_SIZE];
+        bigNumberExponent = bigNumber[EXPONENT_POS +: EXPONENT_SIZE];
+        smallNumberExponent = smallNumber[EXPONENT_POS +: EXPONENT_SIZE];
 
-        expSmallGreaterThanZero = one_smallNumberExponent > 0;
-        expBigGreaterThanZero = one_bigNumberExponent > 0;
+        expSmallGreaterThanZero = smallNumberExponent > 0;
+        expBigGreaterThanZero = bigNumberExponent > 0;
 
-        one_bigNumberMantissa = {2'b0, expBigGreaterThanZero, bigNumber[MANTISSA_POS +: MANTISSA_SIZE]};
+        bigNumberMantissa = {2'b0, expBigGreaterThanZero, bigNumber[MANTISSA_POS +: MANTISSA_SIZE]};
 
         // Denormalize the small mantissa to enable the summerization with the big exponent
-        one_exponentDiff = one_bigNumberExponent - one_smallNumberExponent;
+        exponentDiff = bigNumberExponent - smallNumberExponent;
         // The timing here is really stressed. A fifth pipeline step could reduce stress here ...
-        if (one_exponentDiff >= MANTISSA_SIZE[0 +: EXPONENT_SIZE])
+        if (exponentDiff >= MANTISSA_SIZE[0 +: EXPONENT_SIZE])
         begin
             // If the small number is too small, set everything to zero
-            one_smallNumberMantissa = 0;
-            one_smallNumberMantissaDenormalized = 0;
+            smallNumberMantissa = 0;
+            smallNumberMantissaDenormalized = 0;
         end
-        else 
+        else
         begin
             // If the small number is big enough for summerization, denormalize it!
-            one_smallNumberMantissa = {2'b0, expSmallGreaterThanZero, smallNumber[MANTISSA_POS +: MANTISSA_SIZE]};
-            one_smallNumberMantissaDenormalized = one_smallNumberMantissa >>> one_exponentDiff[0 +: MANTISSA_WIDTH_LOG2];
+            smallNumberMantissa = {2'b0, expSmallGreaterThanZero, smallNumber[MANTISSA_POS +: MANTISSA_SIZE]};
+            smallNumberMantissaDenormalized = smallNumberMantissa >>> exponentDiff[0 +: MANTISSA_WIDTH_LOG2];
         end
 
-        one_exponentDiffGreaterZero = one_exponentDiff > 0;
+        one_bigNumberExponent <= bigNumberExponent;
+        one_smallNumberExponent <= smallNumberExponent;
+        one_bigNumberMantissa <= bigNumberMantissa;
+        one_exponentDiff <= exponentDiff;
+        one_smallNumberMantissa <= smallNumberMantissa;
+        one_smallNumberMantissaDenormalized <= smallNumberMantissaDenormalized;
+        one_exponentDiffGreaterZero <= exponentDiff > 0;
         one_bigNumberSign <= bigNumber[SIGN_POS];
         one_smallNumberSign <= smallNumber[SIGN_POS];
     end
 
-    reg  [MANTISSA_CALC_SIZE - 1 : 0] two_mantissaSum;
     reg                               two_mantissaSumSign;
     reg  [EXPONENT_SIZE - 1 : 0]      two_bigNumberExponent;
     reg  [EXPONENT_SIZE - 1 : 0]      two_smallNumberExponent;
@@ -116,6 +135,7 @@ module FloatAdd
         reg  [MANTISSA_CALC_SIZE - 1 : 0] bigNumberMantissaSigned;
         reg  [MANTISSA_CALC_SIZE - 1 : 0] smallNumberMantissaSigned;
         reg  [MANTISSA_CALC_SIZE - 1 : 0] sumMantissa;
+        reg                               sumMantissaSign;
 
         // We should round when we shift the mantissa (which is done in the previous step)
         // But we can also omit that and save logic and latency (when the rounding error can be accepted)
@@ -152,10 +172,10 @@ module FloatAdd
         sumMantissa = $signed(bigNumberMantissaSigned) + $signed(smallNumberMantissaSigned);
 
         // Safe the sign of the sum
-        two_mantissaSumSign = sumMantissa[MANTISSA_CALC_SIGN_POS];
+        sumMantissaSign = sumMantissa[MANTISSA_CALC_SIGN_POS];
 
         // Convert signed sum back to a unsigned number
-        if (two_mantissaSumSign)
+        if (sumMantissaSign)
         begin
             two_mantissaSum <= ~sumMantissa + 1;
         end
@@ -163,6 +183,7 @@ module FloatAdd
         begin
             two_mantissaSum <= sumMantissa;
         end
+        two_mantissaSumSign <= sumMantissaSign;
         two_bigNumberExponent <= one_bigNumberExponent;
         two_smallNumberExponent <= one_smallNumberExponent;
     end
