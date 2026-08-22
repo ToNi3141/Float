@@ -15,21 +15,23 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-module FindExponent
+module LeadingOneFinder
 #(
-    parameter EXPONENT_SIZE = 8,
+    parameter OUT_SIZE = 8,
     parameter VALUE_SIZE = 23
 )
 (
+    input  wire                     clk,
+    input  wire                     ce,
     input  wire [VALUE_SIZE - 1 : 0]    value,
-    output wire [EXPONENT_SIZE - 1 : 0] exponent
+    output reg  [OUT_SIZE - 1 : 0] out
 );
     localparam ITERATOR_SIZE = VALUE_SIZE + 1;
     // Should not be a problem in real hardware?
     /* verilator lint_off UNOPTFLAT */
-    wire [EXPONENT_SIZE - 1 : 0] tmp [0 : ITERATOR_SIZE - 1];
+    wire [OUT_SIZE - 1 : 0] tmp [0 : ITERATOR_SIZE - 1];
     /* verilator lint_on UNOPTFLAT */
-    assign tmp[0] = {EXPONENT_SIZE{1'b1}}; // Default when no one was found
+    assign tmp[0] = {OUT_SIZE{1'b1}}; // Default when no one was found
     generate 
         genvar i;
         for(i = 0; i < ITERATOR_SIZE - 1; i = i + 1)
@@ -39,5 +41,9 @@ module FindExponent
             assign tmp[i + 1] = value[i] ? i : tmp[i]; 
         end
     endgenerate
-    assign exponent = tmp[ITERATOR_SIZE - 1];
+
+    always @(posedge clk)
+    if (ce) begin
+        out <= tmp[ITERATOR_SIZE - 1];
+    end
 endmodule

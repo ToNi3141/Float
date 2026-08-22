@@ -27,8 +27,15 @@ module FloatToInt
     // In other words: MANTISSA_SIZE + 2.
     parameter INT_SIZE = 32, 
 
-    // Use this delay to add clock cycles. It adds by default 2 clock cycles, so that the conversion requieres 4 clocks.
+    // Use this delay to add clock cycles. It adds by default 2 clock cycles, so that the conversion requires 4 clocks.
     parameter DELAY = 2,
+
+    // Selects what happens when the number does not fit into INT_SIZE.
+    // 0: the output is zero.
+    // 1: the output is the number modulo 2^INT_SIZE. Use this when the consumer is a wrapping
+    //    fix point accumulator, which works with an out of range number where only the lower bits are used
+    //    and the high bits are discarded.
+    parameter OVERFLOW_WRAP = 0,
 
     localparam FLOAT_SIZE = 1 + EXPONENT_SIZE + MANTISSA_SIZE
 )
@@ -56,6 +63,7 @@ module FloatToInt
     reg  [INT_SIZE - 1 : 0] one_number;
     reg                     one_sign;
     reg                     one_overflow;
+    reg                     one_shiftedOut;
     reg                     one_underflow;
     reg                     one_round;
     always @(posedge clk)
@@ -84,6 +92,11 @@ module FloatToInt
         shiftSize = signedShiftSize[0 +: USNIGNED_INT_SIZE_LOG2];
 
         one_overflow <= exponent >= (INT_SIZE - 1); // Substracting sign bit
+        
+        // shiftSize is truncated, so a shift beyond INT_SIZE would wrap around instead of
+        // shifting every bit out
+        one_shiftedOut <= shiftLeft && (signedShiftSize >= $signed(INT_SIZE[0 +: EXPONENT_SIGNED_SIZE]));
+        
         one_underflow <= exponent < 0;
 
         if (shiftLeft)
@@ -128,7 +141,7 @@ module FloatToInt
         overflow = one_overflow;
         sign = one_sign;
 
-        if (overflow)
+        if (one_shiftedOut || (overflow && (OVERFLOW_WRAP == 0)))
         begin
             two_out <= 0;
         end

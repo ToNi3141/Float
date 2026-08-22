@@ -47,8 +47,16 @@ module IntToFloat
     localparam [EXPONENT_SIZE - 1 : 0] EXPONENT_BIAS = ((2 ** (EXPONENT_SIZE - 1)) - 1);
     localparam UNSIGNED_WORK_INT_SIZE_LOG2 = $clog2(UNSIGNED_WORK_INT_SIZE);
 
-    wire [UNSIGNED_WORK_INT_SIZE_LOG2 - 1 : 0] exponent;
-    FindExponent #(.EXPONENT_SIZE(UNSIGNED_WORK_INT_SIZE_LOG2), .VALUE_SIZE(UNSIGNED_WORK_INT_SIZE)) findExponent (one_number, exponent);
+    wire [UNSIGNED_WORK_INT_SIZE_LOG2 - 1 : 0] two_exponent;
+    LeadingOneFinder #(
+        .OUT_SIZE(UNSIGNED_WORK_INT_SIZE_LOG2), 
+        .VALUE_SIZE(UNSIGNED_WORK_INT_SIZE)
+    ) leadingOneFinder (
+        .clk(clk), 
+        .ce(ce), 
+        .value(one_number), 
+        .out(two_exponent)
+    );
 
     reg  [UNSIGNED_WORK_INT_SIZE - 1 : 0]    one_number;
     reg                                 one_sign;
@@ -69,12 +77,10 @@ module IntToFloat
         one_sign <= in[INT_SIZE - 1];
     end
 
-    reg  [UNSIGNED_WORK_INT_SIZE_LOG2 - 1 : 0] two_exponent;
     reg                                        two_sign;
     reg  [UNSIGNED_WORK_INT_SIZE - 1 : 0]      two_number;
     always @(posedge clk)
     if (ce) begin
-        two_exponent <= exponent;
         two_sign <= one_sign;
         two_number <= one_number;
     end

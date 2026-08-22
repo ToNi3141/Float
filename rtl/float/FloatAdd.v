@@ -46,8 +46,16 @@ module FloatAdd
     localparam EXPONENT_INVALID_VALUE = (2 ** MANTISSA_ONE_POS_SIZE) - 1;
 
 
-    wire [MANTISSA_ONE_POS_SIZE - 1 : 0] exponentCorrection;
-    FindExponent #(.EXPONENT_SIZE(MANTISSA_ONE_POS_SIZE), .VALUE_SIZE(MANTISSA_CALC_SIZE)) findExponent (two_mantissaSum, exponentCorrection);
+    wire [MANTISSA_ONE_POS_SIZE - 1 : 0] three_exponentCorrection;
+    LeadingOneFinder #(
+        .OUT_SIZE(MANTISSA_ONE_POS_SIZE), 
+        .VALUE_SIZE(MANTISSA_CALC_SIZE)
+    ) leadingOneFinder (
+        .clk(clk), 
+        .ce(ce), 
+        .value(two_mantissaSum),
+        .out(three_exponentCorrection)
+    );
 
     reg                               one_bigNumberSign;
     reg                               one_smallNumberSign;
@@ -171,14 +179,12 @@ module FloatAdd
     reg  [EXPONENT_SIZE - 1 : 0]            three_smallNumberExponent;
     reg  [MANTISSA_CALC_SIZE - 1 : 0]       three_sumMantissa;
     reg                                     three_sumMantissaSign;
-    reg  [MANTISSA_ONE_POS_SIZE - 1 : 0]    three_exponentCorrection;
     always @(posedge clk)
     if (ce) begin
         three_bigNumberExponent <= two_bigNumberExponent;
         three_smallNumberExponent <= two_smallNumberExponent;
         three_sumMantissa <= two_mantissaSum;
         three_sumMantissaSign <= two_mantissaSumSign;
-        three_exponentCorrection <= exponentCorrection;
     end
 
     always @(posedge clk)

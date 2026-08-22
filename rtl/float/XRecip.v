@@ -42,20 +42,20 @@ module XRecip
     // Clocks: 1
     ////////////////////////////////////////////////////////////////////////////
     reg  [NUMBER_WIDTH - 1 : 0]     step0_number;
-    reg  [EXPONENT_SIZE - 1 : 0]    step0_exponent;
 
-    wire [EXPONENT_SIZE - 1 : 0]    exponent;
-    FindExponent #(
-        .EXPONENT_SIZE(EXPONENT_SIZE),
+    wire [EXPONENT_SIZE - 1 : 0]    step0_exponent;
+    LeadingOneFinder #(
+        .OUT_SIZE(EXPONENT_SIZE),
         .VALUE_SIZE(NUMBER_WIDTH)
-    ) findExponent (
+    ) leadingOneFinder (
+        .clk(clk),
+        .ce(ce),
         .value(in),
-        .exponent(exponent)
+        .out(step0_exponent)
     );
     always @(posedge clk)
     if (ce) begin
         step0_number <= in;
-        step0_exponent <= exponent;
     end
 
     ////////////////////////////////////////////////////////////////////////////
@@ -89,9 +89,8 @@ module XRecip
         .v(step2_number)
     );
 
-    ValueDelay #(.VALUE_SIZE(EXPONENT_SIZE), .DELAY(10)) 
+    ValueDelay #(.VALUE_SIZE(EXPONENT_SIZE), .DELAY(4 + (ITERATIONS * 3))) 
         step2exponent (.clk(clk), .ce(ce), .in(step1_exponent), .out(step2_exponent));
-
 
     ////////////////////////////////////////////////////////////////////////////
     // STEP 3 
