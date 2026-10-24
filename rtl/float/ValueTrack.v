@@ -36,6 +36,7 @@ module ValueTrack
         if (!resetn)
         begin
             valuesCounter <= 0;
+            valueInPipeline <= 0;
         end
         else
         begin
